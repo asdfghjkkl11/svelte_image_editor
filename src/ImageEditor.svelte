@@ -31,6 +31,91 @@
   let oppositeHandleX = 0;  // 반대편 핸들의 x좌표
   let oppositeHandleY = 0;  // 반대편 핸들의 y좌표
 
+  // 방향 정의
+  const directions = {
+    'top-left': { x: -1, y: -1 },
+    'top': { x: 0, y: -1 },
+    'top-right': { x: 1, y: -1 },
+    'left': { x: -1, y: 0 },
+    'right': { x: 1, y: 0 },
+    'bottom-left': { x: -1, y: 1 },
+    'bottom': { x: 0, y: 1 },
+    'bottom-right': { x: 1, y: 1 }
+  };
+
+  function calculateOppositeHandle(edge, object, angle) {
+    const centerX = object.x + object.width / 2;
+    const centerY = object.y + object.height / 2;
+    
+    // 반대편 핸들의 상대적 위치 계산
+    let relativeX = 0;
+    let relativeY = 0;
+    
+    if (edge.includes('left')) relativeX = 1;
+    if (edge.includes('right')) relativeX = -1;
+    if (edge.includes('top')) relativeY = 1;
+    if (edge.includes('bottom')) relativeY = -1;
+    
+    // 회전 적용
+    const rotatedX = relativeX * Math.cos(angle) - relativeY * Math.sin(angle);
+    const rotatedY = relativeX * Math.sin(angle) + relativeY * Math.cos(angle);
+    
+    return {
+      x: centerX + rotatedX * object.width / 2,
+      y: centerY + rotatedY * object.height / 2
+    };
+  }
+
+  function handleResize(event, object, edge) {
+    const direction = directions[edge];
+    const angle = object.angle * Math.PI / 180;
+    
+    // 마우스 이동 거리 계산
+    const deltaX = event.clientX - startX;
+    const deltaY = event.clientY - startY;
+    
+    // 회전된 델타 계산
+    const rotatedDeltaX = deltaX * Math.cos(-angle) - deltaY * Math.sin(-angle);
+    const rotatedDeltaY = deltaX * Math.sin(-angle) + deltaY * Math.cos(-angle);
+    
+    // 방향에 따른 크기 조정
+    const newWidth = Math.max(minSize, startWidth + rotatedDeltaX * direction.x);
+    const newHeight = Math.max(minSize, startHeight + rotatedDeltaY * direction.y);
+    
+    // 반대편 핸들 위치 계산
+    const oppositeHandle = calculateOppositeHandle(edge, object, angle);
+    
+    // 새로운 위치 계산 (반대편 핸들을 기준으로)
+    let newX = object.x;
+    let newY = object.y;
+    
+    if (direction.x !== 0) {
+      // 가로 방향 리사이즈
+      if (direction.x === 1) { // 오른쪽으로 리사이즈
+        newX = object.x;
+      } else { // 왼쪽으로 리사이즈
+        newX = object.x + (object.width - newWidth);
+      }
+    }
+    
+    if (direction.y !== 0) {
+      // 세로 방향 리사이즈
+      if (direction.y === 1) { // 아래로 리사이즈
+        newY = object.y;
+      } else { // 위로 리사이즈
+        newY = object.y + (object.height - newHeight);
+      }
+    }
+    
+    return {
+      width: newWidth,
+      height: newHeight,
+      x: newX,
+      y: newY,
+      oppositeHandle
+    };
+  }
+
   function selectObject(obj) {
     objects = objects.map(o => ({
       ...o,
@@ -107,60 +192,14 @@
       
       objects = objects.map(obj => obj.id === selectedObject.id ? selectedObject : obj);
     } else if (isResizing) {
-      // 새로운 크기 계산
-      let newWidth = startWidth;
-      let newHeight = startHeight;
-      let newX = selectedObject.x;
-      let newY = selectedObject.y;
-
-      if (resizeEdge === 'right' || resizeEdge === 'left') {
-        newWidth = Math.abs(event.clientX - oppositeHandleX);
-        newHeight = startHeight;  // 높이 고정
-        
-        // 왼쪽 핸들일 경우 x좌표 조정
-        if (resizeEdge === 'left') {
-          newX = oppositeHandleX - newWidth;
-        }
-      } else if (resizeEdge === 'bottom' || resizeEdge === 'top') {
-        newWidth = startWidth;  // 너비 고정
-        newHeight = Math.abs(event.clientY - oppositeHandleY);
-        
-        // 위쪽 핸들일 경우 y좌표 조정
-        if (resizeEdge === 'top') {
-          newY = oppositeHandleY - newHeight;
-        }
-      } else if (resizeEdge === 'top-left' || resizeEdge === 'top-right' || 
-                resizeEdge === 'bottom-left' || resizeEdge === 'bottom-right') {
-        newWidth = Math.abs(event.clientX - oppositeHandleX);
-        newHeight = Math.abs(event.clientY - oppositeHandleY);
-
-        // 비율 유지
-        const ratio = startWidth / startHeight;
-        if (newWidth / newHeight > ratio) {
-          newHeight = newWidth / ratio;
-        } else {
-          newWidth = newHeight * ratio;
-        }
-
-        // 대각선 핸들러의 경우 x, y 좌표 조정
-        if (resizeEdge === 'top-left') {
-          newX = oppositeHandleX - newWidth;
-          newY = oppositeHandleY - newHeight;
-        } else if (resizeEdge === 'top-right') {
-          newY = oppositeHandleY - newHeight;
-        } else if (resizeEdge === 'bottom-left') {
-          newX = oppositeHandleX - newWidth;
-        }
-      }
-
-      // 최소 크기 체크
-      if (newWidth >= minSize && newHeight >= minSize) {
-        selectedObject.width = newWidth;
-        selectedObject.height = newHeight;
-        selectedObject.x = newX;
-        selectedObject.y = newY;
-      }
-
+      const result = handleResize(event, selectedObject, resizeEdge);
+      
+      selectedObject.width = result.width;
+      selectedObject.height = result.height;
+      selectedObject.x = result.x;
+      selectedObject.y = result.y;
+      selectedObject.oppositeHandle = result.oppositeHandle;
+      
       objects = objects.map(obj => obj.id === selectedObject.id ? selectedObject : obj);
     } else if (isRotating) {
       const centerX = selectedObject.x + selectedObject.width / 2;
@@ -238,6 +277,16 @@
 <div class="editor-container">
   <div class="canvas">
     {#each objects as obj (obj.id)}
+      <div
+        class="object"
+        style="
+            left: {obj.x}px;
+            top: {obj.y}px;
+            width: {obj.width}px;
+            height: {obj.height}px;
+            background: {obj.color};
+            opacity: 0.5;
+          "></div>
       <div
         class="object"
         class:selected={obj.selected}
