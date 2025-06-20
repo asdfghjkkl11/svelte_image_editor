@@ -5,9 +5,3 @@
 <main>
   <ImageEditor />
 </main>
-
-<style>
-  main {
-    padding: 1rem;
-  }
-</style> 
