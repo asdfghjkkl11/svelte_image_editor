@@ -1,23 +1,13 @@
 <script>
-  export let width = 800;
-  export let height = 600;
+  export let width = 600;
+  export let height = 1800;
+
+  let scale = 0.5
 
   let canvas;
   
   // 오브젝트 상태
-  let objects = [
-    {
-      id: 1,
-      type: 'rect',
-      x: 100,
-      y: 100,
-      width: 200,
-      height: 120,
-      angle: 0,
-      color: '#4fc3f7',
-      selected: false
-    }
-  ];
+  let objects = [];
 
   // 히스토리 관리
   let history = [];
@@ -81,6 +71,7 @@
   let oppositeHandleX = 0;
   let oppositeHandleY = 0;
   let showRotationAngle = false;  // 회전 각도 표시 여부
+  let rotateHandlePosition = 'top';
 
   // 방향 정의
   const directions = {
@@ -195,11 +186,11 @@
     // 머리(위쪽)이 마우스를 바라보도록 각도 계산 (+90도)
     let angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
 
-    // rotate-handle이 아래쪽에 있으면 반대로
-    if (getRotateHandlePosition(obj) === 'bottom') {
+    // 회전 시작 시의 핸들 위치가 'bottom'이면 180도 한 번만 더함
+    if (rotateHandlePosition === 'bottom') {
       angle += 180;
     }
-
+    
     obj.angle = angle;
     objects = objects.map(o => o.id === obj.id ? obj : o);
   }
@@ -231,6 +222,8 @@
         event.clientY - centerY,
         event.clientX - centerX
       ) * 180 / Math.PI;
+      // 회전 핸들 위치 저장
+      rotateHandlePosition = getRotateHandlePosition(obj);
     }
   }
 
@@ -281,8 +274,8 @@
   function addRectangle() {
     const x = 50;
     const y = 50;
-    const width = 150;
-    const height = 100;
+    const width = 300;
+    const height = 200;
     const newRect = {
       id: Date.now(),
       type: 'rect',
@@ -394,120 +387,126 @@
       <button on:click={redo} disabled={currentHistoryIndex >= history.length - 1}>되돌리기</button>
     </div>
   </div>
-  <div class="canvas-container">
-    <div class="canvas" bind:this={canvas}>
-      {#each objects as obj (obj.id)}
-        <div
-          class="object"
-          style="
+  <div class="canvas-wrapper">
+    <div class="canvas-container">
+      <div class="canvas" bind:this={canvas} style="width: {width * scale}px; height: {height * scale}px; ">
+        {#each objects as obj (obj.id)}
+          <div
+            class="object"
+            style="
+                left: {obj.x}px;
+                top: {obj.y}px;
+                width: {obj.width}px;
+                height: {obj.height}px;
+                background: {obj.color};
+                opacity: 0.5;
+              "></div>
+          <div
+            class="object"
+            class:selected={obj.selected}
+            on:click={() => selectObject(obj)}
+            on:mousedown={(e) => handleMouseDown(e, obj, 'drag')}
+            style="
               left: {obj.x}px;
               top: {obj.y}px;
               width: {obj.width}px;
               height: {obj.height}px;
               background: {obj.color};
-              opacity: 0.5;
-            "></div>
-        <div
-          class="object"
-          class:selected={obj.selected}
-          on:click={() => selectObject(obj)}
-          on:mousedown={(e) => handleMouseDown(e, obj, 'drag')}
-          style="
-            left: {obj.x}px;
-            top: {obj.y}px;
-            width: {obj.width}px;
-            height: {obj.height}px;
-            background: {obj.color};
-            transform: rotate({obj.angle}deg);
-          "
-        >
-          {#if obj.selected}
-            <div 
-              class="resize-handle resize-handle-tl"
-              on:mousedown={(e) => handleMouseDown(e, obj, 'resize', 'top-left')}
-            ></div>
-            <div 
-              class="resize-handle resize-handle-t"
-              on:mousedown={(e) => handleMouseDown(e, obj, 'resize', 'top')}
-            ></div>
-            <div 
-              class="resize-handle resize-handle-tr"
-              on:mousedown={(e) => handleMouseDown(e, obj, 'resize', 'top-right')}
-            ></div>
-            <div 
-              class="resize-handle resize-handle-l"
-              on:mousedown={(e) => handleMouseDown(e, obj, 'resize', 'left')}
-            ></div>
-            <div 
-              class="resize-handle resize-handle-r"
-              on:mousedown={(e) => handleMouseDown(e, obj, 'resize', 'right')}
-            ></div>
-            <div 
-              class="resize-handle resize-handle-bl"
-              on:mousedown={(e) => handleMouseDown(e, obj, 'resize', 'bottom-left')}
-            ></div>
-            <div 
-              class="resize-handle resize-handle-b"
-              on:mousedown={(e) => handleMouseDown(e, obj, 'resize', 'bottom')}
-            ></div>
-            <div 
-              class="resize-handle resize-handle-br"
-              on:mousedown={(e) => handleMouseDown(e, obj, 'resize', 'bottom-right')}
-            ></div>
-            <div 
-              class="rotate-handle"
-              style="
-                {getRotateHandlePosition(obj) === 'top' 
-                  ? 'top: -30px; bottom: unset;' 
-                  : 'top: unset; bottom: -30px;'}
-                left: 50%; 
-                transform: translateX(-50%);"
-              on:mousedown={(e) => handleMouseDown(e, obj, 'rotate')}
-            ></div>
-            {#if showRotationAngle && obj.id === selectedObject?.id}
-              <div class="rotation-angle">
-                {Math.round(obj.angle)}°
-              </div>
-            {/if}
-          {/if}
-          사각형
-        </div>
-        {#if obj.selected}
-          {@const centerY = obj.y + obj.height / 2}
-          <div 
-            class="toolbox"
-            style="
-              left: {obj.x + obj.width/2}px;
-              top: {centerY < 300 ? obj.y + obj.height + 10 : obj.y - 40}px;
+              transform: rotate({obj.angle}deg);
             "
           >
-            <button class="tool-btn" on:click|stopPropagation={() => bringToFront(obj)}>
-              맨 앞으로
-            </button>
-            <button class="tool-btn" on:click|stopPropagation={() => bringForward(obj)}>
-              앞으로
-            </button>
-            <button class="tool-btn" on:click|stopPropagation={() => sendBackward(obj)}>
-              뒤로
-            </button>
-            <button class="tool-btn" on:click|stopPropagation={() => sendToBack(obj)}>
-              맨 뒤로
-            </button>
-            <button class="tool-btn" on:click|stopPropagation={() => duplicateObject(obj)}>
-              복제
-            </button>
-            <button class="tool-btn" on:click|stopPropagation={() => deleteObject(obj)}>
-              삭제
-            </button>
+            {#if obj.selected}
+              <div 
+                class="resize-handle resize-handle-tl"
+                on:mousedown={(e) => handleMouseDown(e, obj, 'resize', 'top-left')}
+              ></div>
+              <div 
+                class="resize-handle resize-handle-t"
+                on:mousedown={(e) => handleMouseDown(e, obj, 'resize', 'top')}
+              ></div>
+              <div 
+                class="resize-handle resize-handle-tr"
+                on:mousedown={(e) => handleMouseDown(e, obj, 'resize', 'top-right')}
+              ></div>
+              <div 
+                class="resize-handle resize-handle-l"
+                on:mousedown={(e) => handleMouseDown(e, obj, 'resize', 'left')}
+              ></div>
+              <div 
+                class="resize-handle resize-handle-r"
+                on:mousedown={(e) => handleMouseDown(e, obj, 'resize', 'right')}
+              ></div>
+              <div 
+                class="resize-handle resize-handle-bl"
+                on:mousedown={(e) => handleMouseDown(e, obj, 'resize', 'bottom-left')}
+              ></div>
+              <div 
+                class="resize-handle resize-handle-b"
+                on:mousedown={(e) => handleMouseDown(e, obj, 'resize', 'bottom')}
+              ></div>
+              <div 
+                class="resize-handle resize-handle-br"
+                on:mousedown={(e) => handleMouseDown(e, obj, 'resize', 'bottom-right')}
+              ></div>
+              <div 
+                class="rotate-handle"
+                style="
+                  {getRotateHandlePosition(obj) === 'top' 
+                    ? 'top: -30px; bottom: unset;' 
+                    : 'top: unset; bottom: -30px;'}
+                  left: 50%; 
+                  transform: translateX(-50%);"
+                on:mousedown={(e) => handleMouseDown(e, obj, 'rotate')}
+              ></div>
+              {#if showRotationAngle && obj.id === selectedObject?.id}
+                <div class="rotation-angle">
+                  {Math.round(obj.angle)%360}°
+                </div>
+              {/if}
+            {/if}
+            사각형
           </div>
-        {/if}
-      {/each}
+          {#if obj.selected}
+            {@const centerY = obj.y + obj.height / 2}
+            <div 
+              class="toolbox"
+              style="
+                position: fixed;
+                left: {canvas ? canvas.getBoundingClientRect().left + (obj.x + obj.width/2) : 0}px;
+                top: {canvas ? canvas.getBoundingClientRect().top + (centerY < 300 ? (obj.y + obj.height + 10) : (obj.y - 40)) : 0}px;
+                transform: translateX(-50%);
+              "
+            >
+              <button class="tool-btn" on:click|stopPropagation={() => bringToFront(obj)}>
+                맨 앞으로
+              </button>
+              <button class="tool-btn" on:click|stopPropagation={() => bringForward(obj)}>
+                앞으로
+              </button>
+              <button class="tool-btn" on:click|stopPropagation={() => sendBackward(obj)}>
+                뒤로
+              </button>
+              <button class="tool-btn" on:click|stopPropagation={() => sendToBack(obj)}>
+                맨 뒤로
+              </button>
+              <button class="tool-btn" on:click|stopPropagation={() => duplicateObject(obj)}>
+                복제
+              </button>
+              <button class="tool-btn" on:click|stopPropagation={() => deleteObject(obj)}>
+                삭제
+              </button>
+            </div>
+          {/if}
+        {/each}
+      </div>
     </div>
   </div>
 </div>
 
 <style>
   .editor-container {
+    height: 100vh;
+    padding: 8px;
     display: flex;
     gap: 1rem;
   }
@@ -526,22 +525,29 @@
     flex-direction: column;
     gap: 0.5rem;
   }
+  .canvas-wrapper{
+    height: 100%;
+    position: relative;
+    display: flex;
+    flex: 1;
+    overflow: scroll;
+  }
 
   .canvas-container {
+    height: 100%;
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    flex: 1;
   }
 
   .canvas {
-    position: relative;
-    width: 800px;
-    height: 600px;
     background: #f5f5f5;
     border: 1px solid #ccc;
     border-radius: 4px;
     overflow: hidden;
+    flex-shrink: 0;
+    position: relative;
   }
 
   .object {
@@ -550,7 +556,7 @@
     align-items: center;
     justify-content: center;
     border: 2px solid transparent;
-    border-radius: 8px;
+    border-radius: 1px;
     touch-action: none;
     user-select: none;
     font-weight: bold;
@@ -572,50 +578,50 @@
   }
 
   .resize-handle-tl {
-    top: -6px;
-    left: -6px;
+    top: -5px;
+    left: -5px;
     cursor: nw-resize;
   }
 
   .resize-handle-t {
-    top: -6px;
+    top: -5px;
     left: calc(50% - 4px);
     cursor: n-resize;
   }
 
   .resize-handle-tr {
-    top: -6px;
-    right: -6px;
+    top: -5px;
+    right: -5px;
     cursor: ne-resize;
   }
 
   .resize-handle-l {
     top: calc(50% - 4px);
-    left: -6px;
+    left: -5px;
     cursor: w-resize;
   }
 
   .resize-handle-r {
     top: calc(50% - 4px);
-    right: -6px;
+    right: -5px;
     cursor: e-resize;
   }
 
   .resize-handle-bl {
-    bottom: -6px;
-    left: -6px;
+    bottom: -5px;
+    left: -5px;
     cursor: sw-resize;
   }
 
   .resize-handle-b {
-    bottom: -6px;
+    bottom: -5px;
     left: calc(50% - 4px);
     cursor: s-resize;
   }
 
   .resize-handle-br {
-    bottom: -6px;
-    right: -6px;
+    bottom: -5px;
+    right: -5px;
     cursor: se-resize;
   }
 
@@ -656,7 +662,7 @@
   }
 
   .toolbox {
-    position: absolute;
+    position: fixed;
     transform: translateX(-50%);
     display: flex;
     gap: 4px;
