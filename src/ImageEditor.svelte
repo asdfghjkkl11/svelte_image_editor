@@ -1,45 +1,39 @@
 <script>
-  export let width = 600;
-  export let height = 1800;
+  import { onMount, onDestroy } from 'svelte';
 
-  let scale = 0.5
+  // 1. 상수 및 상태 변수 선언
+  export let width = 600; // 외부에서 받는 캔버스 너비
+  export let height = 1800; // 외부에서 받는 캔버스 높이
+  let scale = 0.5; // 캔버스 스케일(확대/축소 비율)
+  let canvas_y = (height * scale) / 2; // 캔버스의 Y 중심 좌표(스케일 적용)
+  let canvas; // 캔버스 DOM 참조
+  let canvas_rect; // 캔버스 박스 영역
 
-  let canvas;
-  
-  // 오브젝트 상태
+  // 오브젝트(사각형 등) 상태 배열
   let objects = [];
+  // 선택된 오브젝트
+  let selected_object = null;
 
-  // 히스토리 관리
+  // 드래그/리사이즈/회전 상태 플래그 및 관련 변수
+  let is_dragging = false;
+  let is_resizing = false;
+  let is_rotating = false;
+  let start_x = 0;
+  let start_y = 0;
+  let start_width = 0;
+  let start_height = 0;
+  let start_angle = 0;
+  let resize_edge = null;
+  let min_size = 20;
+  let show_rotation_angle = false;  // 회전 각도 표시 여부
+  let rotate_handle_position = false;
+
+  // 히스토리(undo/redo) 관리용 배열 및 인덱스
   let history = [];
-  let currentHistoryIndex = 0;
-  let isHistoryAction = false;
+  let current_history_index = 0;
+  let is_history_action = false;
 
-  function saveToHistory() {
-    if (isHistoryAction) return;
-    
-    // 현재 상태 이후의 히스토리를 제거
-    history = history.slice(0, currentHistoryIndex + 1);
-    // 현재 상태를 히스토리에 추가
-    history.push(JSON.stringify(objects));
-    currentHistoryIndex = history.length - 1;
-  }
-
-  function undo() {
-    if (currentHistoryIndex > 0) {
-      isHistoryAction = true;
-      currentHistoryIndex--;
-      objects = JSON.parse(history[currentHistoryIndex]);
-    }
-  }
-
-  function redo() {
-    if (currentHistoryIndex < history.length - 1) {
-      isHistoryAction = true;
-      currentHistoryIndex++;
-      objects = JSON.parse(history[currentHistoryIndex]);
-    }
-  }
-
+  // 사각형 색상 팔레트
   const colors = [
     '#4fc3f7', // 하늘색
     '#ffb74d', // 주황색
@@ -53,27 +47,7 @@
     '#7986cb'  // 인디고색
   ];
 
-  function getRandomColor() {
-    return colors[Math.floor(Math.random() * colors.length)];
-  }
-
-  let selectedObject = null;
-  let isDragging = false;
-  let isResizing = false;
-  let isRotating = false;
-  let startX = 0;
-  let startY = 0;
-  let startWidth = 0;
-  let startHeight = 0;
-  let startAngle = 0;
-  let resizeEdge = null;
-  let minSize = 20;
-  let oppositeHandleX = 0;
-  let oppositeHandleY = 0;
-  let showRotationAngle = false;  // 회전 각도 표시 여부
-  let rotateHandlePosition = 'top';
-
-  // 방향 정의
+  // 리사이즈 방향 정의
   const directions = {
     'top-left': { x: -1, y: -1 },
     'top': { x: 0, y: -1 },
@@ -85,198 +59,62 @@
     'bottom-right': { x: 1, y: 1 }
   };
 
-  function calculateOppositeHandle(edge, object, angle) {
-    const centerX = object.x + object.width / 2;
-    const centerY = object.y + object.height / 2;
+  let canvas_wrapper; // .canvas-wrapper DOM 참조
+  let canvas_container; // .canvas-container DOM 참조
+  let container_align = 'center'; // 동적으로 바뀌는 align-items 값
+
+  // 2. 유틸 함수
+  // 랜덤 색상 반환
+  function get_random_color() {
+    return colors[Math.floor(Math.random() * colors.length)];
+  }
+
+  // 사각형별 위치(top/bottom) 반환
+  function get_object_position(obj) {
+    const center_y = obj.y + obj.height / 2;
     
-    // 반대편 핸들의 상대적 위치 계산
-    let relativeX = 0;
-    let relativeY = 0;
+    // 캔버스 기준 y=canvas_y보다 위면 아래쪽에, 아니면 위쪽에
+    return (center_y < canvas_y);
+  }
+
+  // 사각형별 rotate-handle 위치(top/bottom) 반환
+  function get_rotate_handle_position(obj) {
+    const center_y = obj.y + obj.height / 2;
+    const rad = (obj.angle || 0) * Math.PI / 180;
+    // 머리(위쪽) 좌표 계산 (중심에서 반높이만큼 위로, 회전 적용)
+    const head_y = center_y - Math.cos(rad) * (obj.height / 2);
     
-    if (edge.includes('left')) relativeX = 1;
-    if (edge.includes('right')) relativeX = -1;
-    if (edge.includes('top')) relativeY = 1;
-    if (edge.includes('bottom')) relativeY = -1;
-    
+    // head_y와 canvas_y가 center_y 기준으로 같은 방향에 있으면 true(위), 아니면 false(아래)
+    // 즉, (head_y - center_y) * (canvas_y - center_y) < 0 이면 rotate-handle을 위에, 아니면 아래에 둠
+    return (head_y - center_y) * (canvas_y - center_y) < 0;
+  }
+
+  // 리사이즈 시 반대편 핸들의 좌표를 계산하는 함수
+  function calculate_opposite_handle(edge, object, angle) {
+    const center_x = object.x + object.width / 2;
+    const center_y = object.y + object.height / 2;
+    let relative_x = 0;
+    let relative_y = 0;
+    if (edge.includes('left')) relative_x = 1;
+    if (edge.includes('right')) relative_x = -1;
+    if (edge.includes('top')) relative_y = 1;
+    if (edge.includes('bottom')) relative_y = -1;
     // 회전 적용
-    const rotatedX = relativeX * Math.cos(angle) - relativeY * Math.sin(angle);
-    const rotatedY = relativeX * Math.sin(angle) + relativeY * Math.cos(angle);
-    
+    const rotated_x = relative_x * Math.cos(angle) - relative_y * Math.sin(angle);
+      const rotated_y = relative_x * Math.sin(angle) + relative_y * Math.cos(angle);
     return {
-      x: centerX + rotatedX * object.width / 2,
-      y: centerY + rotatedY * object.height / 2
+      x: center_x + rotated_x * object.width / 2,
+      y: center_y + rotated_y * object.height / 2
     };
   }
 
-  function handleResize(event, object, edge) {
-    const direction = directions[edge];
-    const angle = object.angle * Math.PI / 180;
-    
-    // 마우스 이동 거리 계산
-    const deltaX = event.clientX - startX;
-    const deltaY = event.clientY - startY;
-    
-    // 회전된 델타 계산
-    const rotatedDeltaX = deltaX * Math.cos(-angle) - deltaY * Math.sin(-angle);
-    const rotatedDeltaY = deltaX * Math.sin(-angle) + deltaY * Math.cos(-angle);
-    
-    // 방향에 따른 크기 조정
-    const newWidth = Math.max(minSize, startWidth + rotatedDeltaX * direction.x);
-    const newHeight = Math.max(minSize, startHeight + rotatedDeltaY * direction.y);
-    
-    // 반대편 핸들 위치 계산
-    const oppositeHandle = calculateOppositeHandle(edge, object, angle);
-    
-    // 새로운 위치 계산 (반대편 핸들을 기준으로)
-    let newX = object.x;
-    let newY = object.y;
-    
-    if (direction.x !== 0) {
-      // 가로 방향 리사이즈
-      if (direction.x === 1) { // 오른쪽으로 리사이즈
-        newX = object.x;
-      } else { // 왼쪽으로 리사이즈
-        newX = object.x + (object.width - newWidth);
-      }
-    }
-    
-    if (direction.y !== 0) {
-      // 세로 방향 리사이즈
-      if (direction.y === 1) { // 아래로 리사이즈
-        newY = object.y;
-      } else { // 위로 리사이즈
-        newY = object.y + (object.height - newHeight);
-      }
-    }
-    
-    return {
-      width: newWidth,
-      height: newHeight,
-      x: newX,
-      y: newY,
-      oppositeHandle
-    };
-  }
-
-  function selectObject(obj) {
-    objects = objects.map(o => ({
-      ...o,
-      selected: o.id === obj.id
-    }));
-    selectedObject = obj;
-    isHistoryAction = true;
-  }
-
-  function handleRotate(event, obj) {
-    // 캔버스 DOM 얻기
-    const canvasRect = canvas.getBoundingClientRect();
-
-    // 사각형 중심 (캔버스 기준)
-    const centerX = obj.x + obj.width / 2;
-    const centerY = obj.y + obj.height / 2;
-
-    // 마우스 위치 (캔버스 기준)
-    const mouseX = event.clientX - canvasRect.left;
-    const mouseY = event.clientY - canvasRect.top;
-
-    // 중심에서 마우스까지의 벡터
-    const dx = mouseX - centerX;
-    const dy = mouseY - centerY;
-
-    // 머리(위쪽)이 마우스를 바라보도록 각도 계산 (+90도)
-    let angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
-
-    // 회전 시작 시의 핸들 위치가 'bottom'이면 180도 한 번만 더함
-    if (rotateHandlePosition === 'bottom') {
-      angle += 180;
-    }
-    
-    obj.angle = angle;
-    objects = objects.map(o => o.id === obj.id ? obj : o);
-  }
-
-  function handleMouseDown(event, obj, type, edge = null) {
-    if (!obj.selected) return;
-    
-    event.stopPropagation();
-    const rect = event.currentTarget.getBoundingClientRect();
-    
-    if (type === 'drag') {
-      isDragging = true;
-      startX = event.clientX - obj.x;
-      startY = event.clientY - obj.y;
-    } else if (type === 'resize') {
-      isResizing = true;
-      resizeEdge = edge;
-      startX = event.clientX;
-      startY = event.clientY;
-      startWidth = obj.width;
-      startHeight = obj.height;
-    } else if (type === 'rotate') {
-      isRotating = true;
-      showRotationAngle = true;
-      // 중심 좌표를 사각형의 중심(x, y, width, height)으로 계산
-      const centerX = obj.x + obj.width / 2;
-      const centerY = obj.y + obj.height / 2;
-      startAngle = Math.atan2(
-        event.clientY - centerY,
-        event.clientX - centerX
-      ) * 180 / Math.PI;
-      // 회전 핸들 위치 저장
-      rotateHandlePosition = getRotateHandlePosition(obj);
-    }
-  }
-
-  function handleMouseMove(event) {
-    if (!selectedObject) return;
-
-    if (isDragging) {
-      const newX = event.clientX - startX;
-      const newY = event.clientY - startY;
-      
-      selectedObject.x = newX;
-      selectedObject.y = newY;
-      
-      objects = objects.map(obj => obj.id === selectedObject.id ? selectedObject : obj);
-    } else if (isResizing) {
-      const result = handleResize(event, selectedObject, resizeEdge);
-      
-      selectedObject.width = result.width;
-      selectedObject.height = result.height;
-      selectedObject.x = result.x;
-      selectedObject.y = result.y;
-      selectedObject.oppositeHandle = result.oppositeHandle;
-      
-      objects = objects.map(obj => obj.id === selectedObject.id ? selectedObject : obj);
-    } else if (isRotating) {
-      handleRotate(event, selectedObject);
-    }
-  }
-
-  function handleMouseUp() {
-    isDragging = false;
-    isResizing = false;
-    isRotating = false;
-    showRotationAngle = false;
-    resizeEdge = null;
-  }
-
-  // 객체 상태가 변경될 때마다 히스토리에 저장 (마우스 이벤트와 선택 제외)
-  $: {
-    if (objects && !isDragging && !isResizing && !isRotating && !isHistoryAction) {
-      saveToHistory();
-    }
-    if (isHistoryAction) {
-      isHistoryAction = false;
-    }
-  }
-
-  function addRectangle() {
+  // 사각형을 추가하는 함수
+  function add_rectangle() {
     const x = 50;
     const y = 50;
     const width = 300;
     const height = 200;
-    const newRect = {
+    const new_rect = {
       id: Date.now(),
       type: 'rect',
       x,
@@ -284,43 +122,38 @@
       width,
       height,
       angle: 0,
-      color: getRandomColor(),
+      color: get_random_color(),
       selected: true
     };
-
-    objects = objects.map(obj => ({
-      ...obj,
-      selected: false
-    }));
-
-    objects = [...objects, newRect];
-    selectedObject = newRect;
+    // 기존 선택 해제
+    objects = objects.map(obj => ({ ...obj, selected: false }));
+    objects = [...objects, new_rect];
+    selected_object = new_rect;
   }
 
-  function deleteObject(obj) {
+  // 오브젝트(사각형 등)를 삭제하는 함수
+  function delete_object(obj) {
     objects = objects.filter(o => o.id !== obj.id);
-    selectedObject = null;
+    selected_object = null;
   }
 
-  function duplicateObject(obj) {
-    const newObj = {
+  // 오브젝트를 복제하는 함수
+  function duplicate_object(obj) {
+    const new_obj = {
       ...obj,
       id: Date.now(),
       x: obj.x + 20,
       y: obj.y + 20,
       selected: true
     };
-    
-    objects = objects.map(o => ({
-      ...o,
-      selected: false
-    }));
-    
-    objects = [...objects, newObj];
-    selectedObject = newObj;
+    // 기존 선택 해제
+    objects = objects.map(o => ({ ...o, selected: false }));
+    objects = [...objects, new_obj];
+    selected_object = new_obj;
   }
 
-  function bringForward(obj) {
+  // 오브젝트를 한 단계 앞으로 이동시키는 함수
+  function bring_forward(obj) {
     const currentIndex = objects.findIndex(o => o.id === obj.id);
     if (currentIndex < objects.length - 1) {
       const newObjects = [...objects];
@@ -331,7 +164,8 @@
     }
   }
 
-  function sendBackward(obj) {
+  // 오브젝트를 한 단계 뒤로 이동시키는 함수
+  function send_backward(obj) {
     const currentIndex = objects.findIndex(o => o.id === obj.id);
     if (currentIndex > 0) {
       const newObjects = [...objects];
@@ -342,7 +176,8 @@
     }
   }
 
-  function bringToFront(obj) {
+  // 오브젝트를 맨 앞으로 이동시키는 함수
+  function bring_to_front(obj) {
     const currentIndex = objects.findIndex(o => o.id === obj.id);
     if (currentIndex !== -1) {
       const newObjects = [...objects];
@@ -352,7 +187,8 @@
     }
   }
 
-  function sendToBack(obj) {
+  // 오브젝트를 맨 뒤로 이동시키는 함수
+  function send_to_back(obj) {
     const currentIndex = objects.findIndex(o => o.id === obj.id);
     if (currentIndex !== -1) {
       const newObjects = [...objects];
@@ -362,34 +198,207 @@
     }
   }
 
-  // 사각형별 rotate-handle 위치 계산 함수 (회전 고려)
-  function getRotateHandlePosition(obj) {
-    const centerX = obj.x + obj.width / 2;
-    const centerY = obj.y + obj.height / 2;
-    const rad = (obj.angle || 0) * Math.PI / 180;
-    // 머리(위쪽) 좌표 계산 (중심에서 반높이만큼 위로, 회전 적용)
-    const headX = centerX + Math.sin(rad) * (-obj.height / 2);
-    const headY = centerY - Math.cos(rad) * (obj.height / 2);
-    // 캔버스 기준 y=300보다 위면 아래쪽에, 아니면 위쪽에
-    return (headY < 300) ? 'top' : 'bottom';
+  // 오브젝트를 선택하는 함수
+  function select_object(obj) {
+    objects = objects.map(o => ({ ...o, selected: o.id === obj.id }));
+    selected_object = obj;
+    is_history_action = true;
+  }
+
+  // 현재 상태를 히스토리에 저장하는 함수
+  function save_to_history() {
+    if (is_history_action) return;
+    history = history.slice(0, current_history_index + 1);
+    history.push(JSON.stringify(objects));
+    current_history_index = history.length - 1;
+  }
+
+  // 실행취소(undo) 함수
+  function undo() {
+    if (current_history_index > 0) {
+      is_history_action = true;
+      current_history_index--;
+      objects = JSON.parse(history[current_history_index]);
+    }
+  }
+
+  // 다시실행(redo) 함수
+  function redo() {
+    if (current_history_index < history.length - 1) {
+      is_history_action = true;
+      current_history_index++;
+      objects = JSON.parse(history[current_history_index]);
+    }
+  }
+
+  // 리사이즈 동작을 처리하는 함수
+  function handle_resize(event, object, edge) {
+    const direction = directions[edge];
+    const angle = object.angle * Math.PI / 180;
+    const delta_x = event.clientX - start_x;
+    const delta_y = event.clientY - start_y;
+    const rotated_delta_x = delta_x * Math.cos(-angle) - delta_y * Math.sin(-angle);
+    const rotated_delta_y = delta_x * Math.sin(-angle) + delta_y * Math.cos(-angle);
+    const new_width = Math.max(min_size, start_width + rotated_delta_x * direction.x);
+    const new_height = Math.max(min_size, start_height + rotated_delta_y * direction.y);
+    const opposite_handle = calculate_opposite_handle(edge, object, angle);
+    let new_x = object.x;
+    let new_y = object.y;
+    if (direction.x !== 0) {
+      if (direction.x === 1) {
+        new_x = object.x;
+      } else {
+        new_x = object.x + (object.width - new_width);
+      }
+    }
+    if (direction.y !== 0) {
+      if (direction.y === 1) {
+        new_y = object.y;
+      } else {
+        new_y = object.y + (object.height - new_height);
+      }
+    }
+    return {
+      width: new_width,
+      height: new_height,
+      x: new_x,
+      y: new_y,
+      oppositeHandle: opposite_handle
+    };
+  }
+
+  // 회전 동작을 처리하는 함수
+  function handle_rotate(event, obj) {
+    const center_x = obj.x + obj.width / 2;
+    const center_y = obj.y + obj.height / 2;
+    const mouse_x = event.clientX - canvas_rect.left;
+    const mouse_y = event.clientY - canvas_rect.top;
+    const dx = mouse_x - center_x;
+    const dy = mouse_y - center_y;
+    let angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+    if (!rotate_handle_position) {
+      angle += 180;
+    }
+    obj.angle = angle;
+    objects = objects.map(o => o.id === obj.id ? obj : o);
+  }
+
+  // 마우스 다운(드래그/리사이즈/회전 시작) 처리 함수
+  function handle_mouse_down(event, obj, type, edge = null) {
+    if (!obj.selected) return;
+    event.stopPropagation();
+    if (type === 'drag') {
+      is_dragging = true;
+      start_x = event.clientX - obj.x;
+      start_y = event.clientY - obj.y;
+    } else if (type === 'resize') {
+      is_resizing = true;
+      resize_edge = edge;
+      start_x = event.clientX;
+      start_y = event.clientY;
+      start_width = obj.width;
+      start_height = obj.height;
+    } else if (type === 'rotate') {
+      is_rotating = true;
+      show_rotation_angle = true;
+      const center_x = obj.x + obj.width / 2;
+      const center_y = obj.y + obj.height / 2;
+      start_angle = Math.atan2(
+        event.clientY - center_y,
+        event.clientX - center_x
+      ) * 180 / Math.PI;
+      rotate_handle_position = get_rotate_handle_position(obj);
+    }
+  }
+
+  // 마우스 이동(드래그/리사이즈/회전) 처리 함수
+  function handle_mouse_move(event) {
+    if (!selected_object) return;
+    if (is_dragging) {
+      const new_x = event.clientX - start_x;
+      const new_y = event.clientY - start_y;
+      selected_object.x = new_x;
+      selected_object.y = new_y;
+      objects = objects.map(obj => obj.id === selected_object.id ? selected_object : obj);
+    } else if (is_resizing) {
+      const result = handle_resize(event, selected_object, resize_edge);
+      selected_object.width = result.width;
+      selected_object.height = result.height;
+      selected_object.x = result.x;
+      selected_object.y = result.y;
+      selected_object.oppositeHandle = result.oppositeHandle;
+      objects = objects.map(obj => obj.id === selected_object.id ? selected_object : obj);
+    } else if (is_rotating) {
+      handle_rotate(event, selected_object);
+    }
+  }
+
+  // 마우스 업(모든 상태 해제) 처리 함수
+  function handle_mouse_up() {
+    is_dragging = false;
+    is_resizing = false;
+    is_rotating = false;
+    show_rotation_angle = false;
+    resize_edge = null;
+  }
+
+  // 캔버스 빈 공간 클릭 시 선택 해제 함수
+  function handle_canvas_mouse_down(event) {
+    if (event.target === canvas) {
+      selected_object = null;
+      objects = objects.map(o => ({ ...o, selected: false }));
+    }
+  }
+
+  // 캔버스와 wrapper의 높이를 비교해 align-items를 동적으로 조정하는 함수
+  function update_container_align() {
+    if (!canvas_wrapper || !canvas_container) return;
+    const wrapper_height = canvas_wrapper.clientHeight;
+    const canvas_height = height * scale;
+    // 캔버스가 wrapper보다 크면 위에서부터, 아니면 가운데
+    container_align = canvas_height > wrapper_height ? 'flex-start' : 'center';
+    canvas_rect = canvas.getBoundingClientRect();
+  }
+
+  // mount 시 resize 이벤트 등록, 언마운트 시 해제
+  onMount(() => {
+    update_container_align();
+    window.addEventListener('resize', update_container_align);
+    return () => {
+      window.removeEventListener('resize', update_container_align);
+    };
+  });
+
+  // scale, height이 바뀔 때마다 align 업데이트
+  $: update_container_align();
+
+  // 6. 반응형 히스토리 저장(마우스 이벤트와 선택 제외)
+  $: {
+    if (objects && !is_dragging && !is_resizing && !is_rotating && !is_history_action) {
+      save_to_history();
+    }
+    if (is_history_action) {
+      is_history_action = false;
+    }
   }
 </script>
 
-<svelte:window on:mousemove={handleMouseMove} on:mouseup={handleMouseUp} />
+<svelte:window on:mousemove={handle_mouse_move} on:mouseup={handle_mouse_up} />
 
 <div class="editor-container">
   <div class="object-toolbox">
     <div class="tool-group">
-      <button on:click={addRectangle}>사각형 추가</button>
+      <button on:click={add_rectangle}>사각형 추가</button>
     </div>
     <div class="tool-group">
-      <button on:click={undo} disabled={currentHistoryIndex <= 0}>실행취소</button>
-      <button on:click={redo} disabled={currentHistoryIndex >= history.length - 1}>되돌리기</button>
+      <button on:click={undo} disabled={current_history_index <= 0}>실행취소</button>
+      <button on:click={redo} disabled={current_history_index >= history.length - 1}>되돌리기</button>
     </div>
   </div>
-  <div class="canvas-wrapper">
-    <div class="canvas-container">
-      <div class="canvas" bind:this={canvas} style="width: {width * scale}px; height: {height * scale}px; ">
+  <div class="canvas-wrapper" bind:this={canvas_wrapper}>
+    <div class="canvas-container" bind:this={canvas_container} style="display: flex; align-items: {container_align}; justify-content: center; min-height: 100%; width: 100%;">
+      <div class="canvas" bind:this={canvas} style="width: {width * scale}px; height: {height * scale}px; "
+        on:mousedown={handle_canvas_mouse_down}>
         {#each objects as obj (obj.id)}
           <div
             class="object"
@@ -403,9 +412,18 @@
               "></div>
           <div
             class="object"
-            class:selected={obj.selected}
-            on:click={() => selectObject(obj)}
-            on:mousedown={(e) => handleMouseDown(e, obj, 'drag')}
+            style="
+                left: {canvas_rect.left + obj.x + 1}px;
+                top: {canvas_rect.top + obj.y + 1}px;
+                width: {obj.width}px;
+                height: {obj.height}px;
+                background: {obj.color};
+                transform: rotate({obj.angle}deg);
+                position: fixed;
+                opacity: 0.5;
+              "></div>
+          <div
+            class="object"
             style="
               left: {obj.x}px;
               top: {obj.y}px;
@@ -415,84 +433,97 @@
               transform: rotate({obj.angle}deg);
             "
           >
+          </div>
+          <div
+            class="object object-wrapper"
+            class:selected={obj.selected}
+            on:click={() => select_object(obj)}
+            on:mousedown={(e) => handle_mouse_down(e, obj, 'drag')}
+            style="
+                left: {canvas_rect.left + obj.x + 1}px;
+                top: {canvas_rect.top + obj.y + 1}px;
+                width: {obj.width}px;
+                height: {obj.height}px;
+                transform: rotate({obj.angle}deg);
+                position: fixed;
+              ">
             {#if obj.selected}
               <div 
                 class="resize-handle resize-handle-tl"
-                on:mousedown={(e) => handleMouseDown(e, obj, 'resize', 'top-left')}
+                on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'top-left')}
               ></div>
               <div 
                 class="resize-handle resize-handle-t"
-                on:mousedown={(e) => handleMouseDown(e, obj, 'resize', 'top')}
+                on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'top')}
               ></div>
               <div 
                 class="resize-handle resize-handle-tr"
-                on:mousedown={(e) => handleMouseDown(e, obj, 'resize', 'top-right')}
+                on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'top-right')}
               ></div>
               <div 
                 class="resize-handle resize-handle-l"
-                on:mousedown={(e) => handleMouseDown(e, obj, 'resize', 'left')}
+                on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'left')}
               ></div>
               <div 
                 class="resize-handle resize-handle-r"
-                on:mousedown={(e) => handleMouseDown(e, obj, 'resize', 'right')}
+                on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'right')}
               ></div>
               <div 
                 class="resize-handle resize-handle-bl"
-                on:mousedown={(e) => handleMouseDown(e, obj, 'resize', 'bottom-left')}
+                on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'bottom-left')}
               ></div>
               <div 
                 class="resize-handle resize-handle-b"
-                on:mousedown={(e) => handleMouseDown(e, obj, 'resize', 'bottom')}
+                on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'bottom')}
               ></div>
               <div 
                 class="resize-handle resize-handle-br"
-                on:mousedown={(e) => handleMouseDown(e, obj, 'resize', 'bottom-right')}
+                on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'bottom-right')}
               ></div>
               <div 
                 class="rotate-handle"
                 style="
-                  {getRotateHandlePosition(obj) === 'top' 
+                  {get_rotate_handle_position(obj)
                     ? 'top: -30px; bottom: unset;' 
                     : 'top: unset; bottom: -30px;'}
                   left: 50%; 
                   transform: translateX(-50%);"
-                on:mousedown={(e) => handleMouseDown(e, obj, 'rotate')}
+                on:mousedown={(e) => handle_mouse_down(e, obj, 'rotate')}
               ></div>
-              {#if showRotationAngle && obj.id === selectedObject?.id}
+              {#if show_rotation_angle && obj.id === selected_object?.id}
                 <div class="rotation-angle">
-                  {Math.round(obj.angle)%360}°
+                  {(Math.round(obj.angle)+360)%360}°
                 </div>
               {/if}
+              
             {/if}
-            사각형
           </div>
           {#if obj.selected}
-            {@const centerY = obj.y + obj.height / 2}
             <div 
               class="toolbox"
               style="
                 position: fixed;
-                left: {canvas ? canvas.getBoundingClientRect().left + (obj.x + obj.width/2) : 0}px;
-                top: {canvas ? canvas.getBoundingClientRect().top + (centerY < 300 ? (obj.y + obj.height + 10) : (obj.y - 40)) : 0}px;
+                left: {canvas_rect.left + (obj.x + obj.width/2)}px;
+                top: {canvas_rect.top + (get_object_position(obj) ? (obj.y + obj.height + 10) : (obj.y - 40))}px;
                 transform: translateX(-50%);
               "
             >
-              <button class="tool-btn" on:click|stopPropagation={() => bringToFront(obj)}>
+              <button class="tool-btn" on:click|stopPropagation={() => bring_to_front(obj)}>
                 맨 앞으로
               </button>
-              <button class="tool-btn" on:click|stopPropagation={() => bringForward(obj)}>
+              <button class="tool-btn" on:click|stopPropagation={() => bring_forward(obj)}>
                 앞으로
               </button>
-              <button class="tool-btn" on:click|stopPropagation={() => sendBackward(obj)}>
+              <button class="tool-btn" on:click|stopPropagation={() => send_backward(obj)}>
                 뒤로
               </button>
-              <button class="tool-btn" on:click|stopPropagation={() => sendToBack(obj)}>
+              <button class="tool-btn" on:click|stopPropagation={() => send_to_back(obj)}>
                 맨 뒤로
               </button>
-              <button class="tool-btn" on:click|stopPropagation={() => duplicateObject(obj)}>
+              <button class="tool-btn" on:click|stopPropagation={() => duplicate_object(obj)}>
                 복제
               </button>
-              <button class="tool-btn" on:click|stopPropagation={() => deleteObject(obj)}>
+              <button class="tool-btn" on:click|stopPropagation={() => delete_object(obj)}>
                 삭제
               </button>
             </div>
