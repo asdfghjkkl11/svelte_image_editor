@@ -72,7 +72,7 @@
   // 사각형별 위치(top/bottom) 반환
   function get_object_position(obj) {
     const center_y = obj.y + obj.height / 2;
-    
+
     // 캔버스 기준 y=canvas_y보다 위면 아래쪽에, 아니면 위쪽에
     return (center_y < canvas_y);
   }
@@ -83,7 +83,7 @@
     const rad = (obj.angle || 0) * Math.PI / 180;
     // 머리(위쪽) 좌표 계산 (중심에서 반높이만큼 위로, 회전 적용)
     const head_y = center_y - Math.cos(rad) * (obj.height / 2);
-    
+
     // head_y와 canvas_y가 center_y 기준으로 같은 방향에 있으면 true(위), 아니면 false(아래)
     // 즉, (head_y - center_y) * (canvas_y - center_y) < 0 이면 rotate-handle을 위에, 아니면 아래에 둠
     return (head_y - center_y) * (canvas_y - center_y) < 0;
@@ -101,7 +101,7 @@
     if (edge.includes('bottom')) relative_y = -1;
     // 회전 적용
     const rotated_x = relative_x * Math.cos(angle) - relative_y * Math.sin(angle);
-      const rotated_y = relative_x * Math.sin(angle) + relative_y * Math.cos(angle);
+    const rotated_y = relative_x * Math.sin(angle) + relative_y * Math.cos(angle);
     return {
       x: center_x + rotated_x * object.width / 2,
       y: center_y + rotated_y * object.height / 2
@@ -241,29 +241,23 @@
     const rotated_delta_y = delta_x * Math.sin(-angle) + delta_y * Math.cos(-angle);
     const new_width = Math.max(min_size, start_width + rotated_delta_x * direction.x);
     const new_height = Math.max(min_size, start_height + rotated_delta_y * direction.y);
-    const opposite_handle = calculate_opposite_handle(edge, object, angle);
+    const before_opposite_handle = calculate_opposite_handle(edge, object, angle);
+    object.width = new_width;
+    object.height = new_height;
+    const after_opposite_handle = calculate_opposite_handle(edge, object, angle);
     let new_x = object.x;
     let new_y = object.y;
-    if (direction.x !== 0) {
-      if (direction.x === 1) {
-        new_x = object.x;
-      } else {
-        new_x = object.x + (object.width - new_width);
-      }
-    }
-    if (direction.y !== 0) {
-      if (direction.y === 1) {
-        new_y = object.y;
-      } else {
-        new_y = object.y + (object.height - new_height);
-      }
-    }
+
+    const opposite_delta_x = before_opposite_handle.x - after_opposite_handle.x;
+    const opposite_delta_y = before_opposite_handle.y - after_opposite_handle.y;
+    new_x += opposite_delta_x;
+    new_y += opposite_delta_y;
+
     return {
       width: new_width,
       height: new_height,
       x: new_x,
-      y: new_y,
-      oppositeHandle: opposite_handle
+      y: new_y
     };
   }
 
@@ -326,7 +320,6 @@
       selected_object.height = result.height;
       selected_object.x = result.x;
       selected_object.y = result.y;
-      selected_object.oppositeHandle = result.oppositeHandle;
       objects = objects.map(obj => obj.id === selected_object.id ? selected_object : obj);
     } else if (is_rotating) {
       handle_rotate(event, selected_object);
@@ -448,45 +441,45 @@
                 position: fixed;
               ">
             {#if obj.selected}
-              <div 
+              <div
                 class="resize-handle resize-handle-tl"
                 on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'top-left')}
               ></div>
-              <div 
+              <div
                 class="resize-handle resize-handle-t"
                 on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'top')}
               ></div>
-              <div 
+              <div
                 class="resize-handle resize-handle-tr"
                 on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'top-right')}
               ></div>
-              <div 
+              <div
                 class="resize-handle resize-handle-l"
                 on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'left')}
               ></div>
-              <div 
+              <div
                 class="resize-handle resize-handle-r"
                 on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'right')}
               ></div>
-              <div 
+              <div
                 class="resize-handle resize-handle-bl"
                 on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'bottom-left')}
               ></div>
-              <div 
+              <div
                 class="resize-handle resize-handle-b"
                 on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'bottom')}
               ></div>
-              <div 
+              <div
                 class="resize-handle resize-handle-br"
                 on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'bottom-right')}
               ></div>
-              <div 
+              <div
                 class="rotate-handle"
                 style="
                   {get_rotate_handle_position(obj)
-                    ? 'top: -30px; bottom: unset;' 
+                    ? 'top: -30px; bottom: unset;'
                     : 'top: unset; bottom: -30px;'}
-                  left: 50%; 
+                  left: 50%;
                   transform: translateX(-50%);"
                 on:mousedown={(e) => handle_mouse_down(e, obj, 'rotate')}
               ></div>
@@ -495,11 +488,11 @@
                   {(Math.round(obj.angle)+360)%360}°
                 </div>
               {/if}
-              
+
             {/if}
           </div>
           {#if obj.selected}
-            <div 
+            <div
               class="toolbox"
               style="
                 position: fixed;
@@ -746,4 +739,4 @@
     background: #ccc;
     cursor: not-allowed;
   }
-</style> 
+</style>
