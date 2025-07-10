@@ -419,16 +419,7 @@
       <div class="canvas" bind:this={canvas} style="width: {width * scale}px; height: {height * scale}px; "
         on:mousedown={handle_canvas_mouse_down}>
         {#each objects as obj (obj.id)}
-          <div
-            class="object"
-            style="
-                left: {obj.x}px;
-                top: {obj.y}px;
-                width: {obj.width}px;
-                height: {obj.height}px;
-                background: {obj.color};
-                opacity: 0.5;
-              "></div>
+          <!--overflow 배경-->
           <div
             class="object"
             style="
@@ -441,6 +432,7 @@
                 position: fixed;
                 opacity: 0.5;
               "></div>
+          <!--본체-->
           <div
             class="object"
             style="
@@ -463,6 +455,7 @@
               "
             >{@html obj.text}</div>
           </div>
+          <!--입력용창-->
           <div
             class="object object-wrapper"
             class:selected={obj.selected}
