@@ -22,6 +22,8 @@
   let start_y = 0;
   let start_width = 0;
   let start_height = 0;
+  let start_obj_x = 0;
+  let start_obj_y = 0;
   let start_angle = 0;
   let resize_edge = null;
   let min_size = 20;
@@ -87,25 +89,6 @@
     // head_y와 canvas_y가 center_y 기준으로 같은 방향에 있으면 true(위), 아니면 false(아래)
     // 즉, (head_y - center_y) * (canvas_y - center_y) < 0 이면 rotate-handle을 위에, 아니면 아래에 둠
     return (head_y - center_y) * (canvas_y - center_y) < 0;
-  }
-
-  // 리사이즈 시 반대편 핸들의 좌표를 계산하는 함수
-  function calculate_opposite_handle(edge, object, angle) {
-    const center_x = object.x + object.width / 2;
-    const center_y = object.y + object.height / 2;
-    let relative_x = 0;
-    let relative_y = 0;
-    if (edge.includes('left')) relative_x = 1;
-    if (edge.includes('right')) relative_x = -1;
-    if (edge.includes('top')) relative_y = 1;
-    if (edge.includes('bottom')) relative_y = -1;
-    // 회전 적용
-    const rotated_x = relative_x * Math.cos(angle) - relative_y * Math.sin(angle);
-    const rotated_y = relative_x * Math.sin(angle) + relative_y * Math.cos(angle);
-    return {
-      x: center_x + rotated_x * object.width / 2,
-      y: center_y + rotated_y * object.height / 2
-    };
   }
 
   // 사각형을 추가하는 함수
@@ -239,31 +222,65 @@
 
   // 리사이즈 동작을 처리하는 함수
   function handle_resize(event, object, edge) {
-    const direction = directions[edge];
-    const angle = object.angle * Math.PI / 180;
-    const delta_x = event.clientX - start_x;
-    const delta_y = event.clientY - start_y;
-    const rotated_delta_x = delta_x * Math.cos(-angle) - delta_y * Math.sin(-angle);
-    const rotated_delta_y = delta_x * Math.sin(-angle) + delta_y * Math.cos(-angle);
-    const new_width = Math.max(min_size, start_width + rotated_delta_x * direction.x);
-    const new_height = Math.max(min_size, start_height + rotated_delta_y * direction.y);
-    const before_opposite_handle = calculate_opposite_handle(edge, object, angle);
-    object.width = new_width;
-    object.height = new_height;
-    const after_opposite_handle = calculate_opposite_handle(edge, object, angle);
-    let new_x = object.x;
-    let new_y = object.y;
+    const rad = object.angle * Math.PI / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
 
-    const opposite_delta_x = before_opposite_handle.x - after_opposite_handle.x;
-    const opposite_delta_y = before_opposite_handle.y - after_opposite_handle.y;
-    new_x += opposite_delta_x;
-    new_y += opposite_delta_y;
+    // 마우스 위치 (캔버스 기준)
+    const mouse_x = event.clientX - canvas_rect.left;
+    const mouse_y = event.clientY - canvas_rect.top;
+
+    // 시작 시점의 객체 중심
+    const center_x = start_obj_x + start_width / 2;
+    const center_y = start_obj_y + start_height / 2;
+
+    // 핸들 방향 벡터 (로컬 좌표계)
+    const dir_x = edge.includes('left') ? -1 : (edge.includes('right') ? 1 : 0);
+    const dir_y = edge.includes('top') ? -1 : (edge.includes('bottom') ? 1 : 0);
+
+    // 피벗(반대편 핸들) 위치 계산 (월드 좌표계)
+    const pivot_local_x = -dir_x * start_width / 2;
+    const pivot_local_y = -dir_y * start_height / 2;
+    const pivot_offset_x = pivot_local_x * cos - pivot_local_y * sin;
+    const pivot_offset_y = pivot_local_x * sin + pivot_local_y * cos;
+    const pivot_x = center_x + pivot_offset_x;
+    const pivot_y = center_y + pivot_offset_y;
+
+    // 피벗에서 마우스까지의 벡터
+    const vec_x = mouse_x - pivot_x;
+    const vec_y = mouse_y - pivot_y;
+
+    // 벡터를 객체의 로컬 좌표계로 변환 (회전의 역연산)
+    const unrotated_dx = vec_x * cos + vec_y * sin;
+    const unrotated_dy = -vec_x * sin + vec_y * cos;
+
+    let new_width, new_height;
+
+    // 핸들 종류에 따라 새 너비/높이 결정
+    if (dir_x === 0) { // 상하 핸들
+        new_width = start_width;
+        new_height = Math.max(min_size, Math.abs(unrotated_dy));
+    } else if (dir_y === 0) { // 좌우 핸들
+        new_width = Math.max(min_size, Math.abs(unrotated_dx));
+        new_height = start_height;
+    } else { // 모서리 핸들
+        new_width = Math.max(min_size, Math.abs(unrotated_dx));
+        new_height = Math.max(min_size, Math.abs(unrotated_dy));
+    }
+
+    // 새 중심점 계산
+    const center_offset_local_x = unrotated_dx / 2;
+    const center_offset_local_y = unrotated_dy / 2;
+    const center_offset_x = center_offset_local_x * cos - center_offset_local_y * sin;
+    const center_offset_y = center_offset_local_x * sin + center_offset_local_y * cos;
+    const new_center_x = pivot_x + center_offset_x;
+    const new_center_y = pivot_y + center_offset_y;
 
     return {
-      width: new_width,
-      height: new_height,
-      x: new_x,
-      y: new_y
+        width: new_width,
+        height: new_height,
+        x: new_center_x - new_width / 2,
+        y: new_center_y - new_height / 2,
     };
   }
 
@@ -299,6 +316,8 @@
       start_y = event.clientY;
       start_width = obj.width;
       start_height = obj.height;
+      start_obj_x = obj.x;
+      start_obj_y = obj.y;
     } else if (type === 'rotate') {
       is_rotating = true;
       show_rotation_angle = true;
@@ -434,8 +453,8 @@
             "
           >
             <div
-                    class="text-element"
-                    style="
+              class="text-element"
+              style="
                 font-size: {obj.fontSize}px;
                 font-family: {obj.fontFamily};
                 font-weight: {obj.fontWeight};
