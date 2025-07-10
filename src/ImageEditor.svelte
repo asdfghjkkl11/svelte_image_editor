@@ -123,7 +123,13 @@
       height,
       angle: 0,
       color: get_random_color(),
-      selected: true
+      selected: true,
+      text: '텍스트',
+      fontSize: 24,
+      fontFamily: 'Arial',
+      fontWeight: 'normal',
+      textAlign: 'center',
+      textColor: '#000000'
     };
     // 기존 선택 해제
     objects = objects.map(obj => ({ ...obj, selected: false }));
@@ -280,6 +286,7 @@
   // 마우스 다운(드래그/리사이즈/회전 시작) 처리 함수
   function handle_mouse_down(event, obj, type, edge = null) {
     if (!obj.selected) return;
+    selected_object = obj; // 항상 최신 객체 정보를 사용하도록 업데이트
     event.stopPropagation();
     if (type === 'drag') {
       is_dragging = true;
@@ -426,6 +433,16 @@
               transform: rotate({obj.angle}deg);
             "
           >
+            <div
+                    class="text-element"
+                    style="
+                font-size: {obj.fontSize}px;
+                font-family: {obj.fontFamily};
+                font-weight: {obj.fontWeight};
+                text-align: {obj.textAlign};
+                color: {obj.textColor};
+              "
+            >{@html obj.text}</div>
           </div>
           <div
             class="object object-wrapper"
@@ -440,6 +457,22 @@
                 transform: rotate({obj.angle}deg);
                 position: fixed;
               ">
+            <div
+              class="text-element"
+              contenteditable="true"
+              style="
+                font-size: {obj.fontSize}px;
+                font-family: {obj.fontFamily};
+                font-weight: {obj.fontWeight};
+                text-align: {obj.textAlign};
+                color: {obj.textColor};
+              "
+              on:mousedown|stopPropagation
+              bind:innerText={obj.text}
+              on:input={() => {
+                objects = [...objects];
+              }}
+            ></div>
             {#if obj.selected}
               <div
                 class="resize-handle resize-handle-tl"
@@ -519,6 +552,16 @@
               <button class="tool-btn" on:click|stopPropagation={() => delete_object(obj)}>
                 삭제
               </button>
+              <input type="color" class="tool-btn" bind:value={obj.textColor} on:mousedown|stopPropagation on:input={() => objects = [...objects]} />
+              <input type="number" class="tool-btn" bind:value={obj.fontSize} on:mousedown|stopPropagation on:input={() => objects = [...objects]} style="width: 60px" />
+              <select class="tool-btn" bind:value={obj.textAlign} on:mousedown|stopPropagation on:change={() => objects = [...objects]}>
+                <option value="left">좌</option>
+                <option value="center">중</option>
+                <option value="right">우</option>
+              </select>
+              <button class="tool-btn" on:click|stopPropagation={() => {obj.fontWeight = obj.fontWeight === 'bold' ? 'normal' : 'bold'; objects = [...objects];}}>
+                <b>B</b>
+              </button>
             </div>
           {/if}
         {/each}
@@ -590,6 +633,16 @@
 
   .object.selected {
     border: 2px solid #333;
+  }
+
+  .text-element {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: pre-wrap;
+    word-break: break-word;
+    cursor: text;
+    outline: none;
   }
 
   .resize-handle {
