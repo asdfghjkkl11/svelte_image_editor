@@ -220,6 +220,12 @@
     }
   }
 
+  // 텍스트 서식 적용 함수
+  function format_text(command, value = null) {
+    document.execCommand(command, false, value);
+    objects = objects;
+  }
+
   // 리사이즈 동작을 처리하는 함수
   function handle_resize(event, object, edge) {
     const rad = object.angle * Math.PI / 180;
@@ -416,21 +422,6 @@
       <div class="canvas" bind:this={canvas} style="width: {width * scale}px; height: {height * scale}px; "
            on:mousedown={handle_canvas_mouse_down}>
         {#each objects as obj (obj.id)}
-          <!--overflow 배경-->
-          <!--{#if obj.selected}-->
-          <!--  <div-->
-          <!--          class="object"-->
-          <!--          style="-->
-          <!--      left: {canvas_rect.left + obj.x + 1}px;-->
-          <!--      top: {canvas_rect.top + obj.y + 1}px;-->
-          <!--      width: {obj.width}px;-->
-          <!--      height: {obj.height}px;-->
-          <!--      background: {obj.color};-->
-          <!--      transform: rotate({obj.angle}deg);-->
-          <!--      position: fixed;-->
-          <!--      opacity: 0.5;-->
-          <!--    "></div>-->
-          <!--{/if}-->
           <!--본체-->
           <div
                   class="object"
@@ -446,13 +437,6 @@
           >
             <div
                     class="text-element"
-                    style="
-                font-size: {obj.fontSize}px;
-                font-family: {obj.fontFamily};
-                font-weight: {obj.fontWeight};
-                text-align: {obj.textAlign};
-                color: {obj.textColor};
-              "
             >{@html obj.text}</div>
           </div>
           <!--입력용창-->
@@ -483,20 +467,14 @@
               <div
                       class="text-element"
                       contenteditable="true"
-                      style="
-                font-size: {obj.fontSize}px;
-                font-family: {obj.fontFamily};
-                font-weight: {obj.fontWeight};
-                text-align: {obj.textAlign};
-                color: {obj.textColor};
-              "
                       on:mousedown|stopPropagation
-                      bind:innerText={obj.text}
+                      bind:innerHTML={obj.text}
                       on:focus={() => is_editing_text = true}
-                      on:blur={() => { is_editing_text = false; objects = objects; }}
-                      on:input={() => {
-                objects = objects;
-              }}
+                      on:blur={() => { is_editing_text = false; save_to_history(); }}
+                      on:input={(e) => {
+                        obj.text = e.target.innerHTML;
+                        objects = [...objects];
+                      }}
               ></div>
               <div
                       class="resize-handle resize-handle-tl"
@@ -556,23 +534,59 @@
       <button on:click={undo} disabled={current_history_index <= 0}>실행취소</button>
       <button on:click={redo} disabled={current_history_index >= history.length - 1}>되돌리기</button>
       <button class="tool-btn" on:click|stopPropagation={() => bring_to_front(selected_object)}>
-        맨 앞으로
-      </button>
-      <button class="tool-btn" on:click|stopPropagation={() => bring_forward(selected_object)}>
-        앞으로
-      </button>
-      <button class="tool-btn" on:click|stopPropagation={() => send_backward(selected_object)}>
-        뒤로
-      </button>
-      <button class="tool-btn" on:click|stopPropagation={() => send_to_back(selected_object)}>
-        맨 뒤로
-      </button>
-      <button class="tool-btn" on:click|stopPropagation={() => duplicate_object(selected_object)}>
-        복제
-      </button>
-      <button class="tool-btn" on:click|stopPropagation={() => delete_object(selected_object)}>
-        삭제
-      </button>
+                맨 앞으로
+              </button>
+              <button class="tool-btn" on:click|stopPropagation={() => bring_forward(selected_object)}>
+                앞으로
+              </button>
+              <button class="tool-btn" on:click|stopPropagation={() => send_backward(selected_object)}>
+                뒤로
+              </button>
+              <button class="tool-btn" on:click|stopPropagation={() => send_to_back(selected_object)}>
+                맨 뒤로
+              </button>
+              <button class="tool-btn" on:click|stopPropagation={() => duplicate_object(selected_object)}>
+                복제
+              </button>
+              <button class="tool-btn" on:click|stopPropagation={() => delete_object(selected_object)}>
+                삭제
+              </button>
+              <button class="tool-btn" on:click|stopPropagation={() => format_text('bold')}>
+                <b>B</b>
+              </button>
+              <button class="tool-btn" on:click|stopPropagation={() => format_text('italic')}>
+                <i>I</i>
+              </button>
+              <button class="tool-btn" on:click|stopPropagation={() => format_text('underline')}>
+                <u>U</u>
+              </button>
+              <button class="tool-btn" on:click|stopPropagation={() => format_text('strikeThrough')}>
+                <s>S</s>
+              </button>
+              <button class="tool-btn" on:click|stopPropagation={() => format_text('justifyLeft')}>
+                Align Left
+              </button>
+              <button class="tool-btn" on:click|stopPropagation={() => format_text('justifyCenter')}>
+                Align Center
+              </button>
+              <button class="tool-btn" on:click|stopPropagation={() => format_text('justifyRight')}>
+                Align Right
+              </button>
+              <button class="tool-btn" on:click|stopPropagation={() => format_text('justifyFull')}>
+                Justify
+              </button>
+              <input type="color" class="tool-btn"
+                     on:input={(e) => format_text('foreColor', e.target.value)}
+                     on:mousedown|stopPropagation
+                     on:focus={() => is_editing_text = true}
+                     on:blur={() => { is_editing_text = false; }}
+              />
+              <input type="color" class="tool-btn"
+                     on:input={(e) => format_text('backColor', e.target.value)}
+                     on:mousedown|stopPropagation
+                     on:focus={() => is_editing_text = true}
+                     on:blur={() => { is_editing_text = false; }}
+              />
     </div>
   </div>
 </div>
