@@ -12,7 +12,7 @@
   // 오브젝트(사각형 등) 상태 배열
   let objects = [];
   // 선택된 오브젝트
-  let selected_object = null;
+  let selected_object = {};
 
   // 드래그/리사이즈/회전 상태 플래그 및 관련 변수
   let is_dragging = false;
@@ -124,7 +124,7 @@
   // 오브젝트(사각형 등)를 삭제하는 함수
   function delete_object(obj) {
     objects = objects.filter(o => o.id !== obj.id);
-    selected_object = null;
+    selected_object = {};
   }
 
   // 오브젝트를 복제하는 함수
@@ -258,14 +258,14 @@
 
     // 핸들 종류에 따라 새 너비/높이 결정
     if (dir_x === 0) { // 상하 핸들
-        new_width = start_width;
-        new_height = Math.max(min_size, Math.abs(unrotated_dy));
+      new_width = start_width;
+      new_height = Math.max(min_size, Math.abs(unrotated_dy));
     } else if (dir_y === 0) { // 좌우 핸들
-        new_width = Math.max(min_size, Math.abs(unrotated_dx));
-        new_height = start_height;
+      new_width = Math.max(min_size, Math.abs(unrotated_dx));
+      new_height = start_height;
     } else { // 모서리 핸들
-        new_width = Math.max(min_size, Math.abs(unrotated_dx));
-        new_height = Math.max(min_size, Math.abs(unrotated_dy));
+      new_width = Math.max(min_size, Math.abs(unrotated_dx));
+      new_height = Math.max(min_size, Math.abs(unrotated_dy));
     }
 
     // 새 중심점 계산
@@ -277,10 +277,10 @@
     const new_center_y = pivot_y + center_offset_y;
 
     return {
-        width: new_width,
-        height: new_height,
-        x: new_center_x - new_width / 2,
-        y: new_center_y - new_height / 2,
+      width: new_width,
+      height: new_height,
+      x: new_center_x - new_width / 2,
+      y: new_center_y - new_height / 2,
     };
   }
 
@@ -324,8 +324,8 @@
       const center_x = obj.x + obj.width / 2;
       const center_y = obj.y + obj.height / 2;
       start_angle = Math.atan2(
-        event.clientY - center_y,
-        event.clientX - center_x
+              event.clientY - center_y,
+              event.clientX - center_x
       ) * 180 / Math.PI;
       rotate_handle_position = get_rotate_handle_position(obj);
     }
@@ -364,7 +364,7 @@
   // 캔버스 빈 공간 클릭 시 선택 해제 함수
   function handle_canvas_mouse_down(event) {
     if (event.target === canvas) {
-      selected_object = null;
+      selected_object = {};
       objects = objects.map(o => ({ ...o, selected: false }));
     }
   }
@@ -410,33 +410,31 @@
     <div class="tool-group">
       <button on:click={add_rectangle}>사각형 추가</button>
     </div>
-    <div class="tool-group">
-      <button on:click={undo} disabled={current_history_index <= 0}>실행취소</button>
-      <button on:click={redo} disabled={current_history_index >= history.length - 1}>되돌리기</button>
-    </div>
   </div>
   <div class="canvas-wrapper" bind:this={canvas_wrapper}>
     <div class="canvas-container" bind:this={canvas_container} style="display: flex; align-items: {container_align}; justify-content: center; min-height: 100%; width: 100%;">
       <div class="canvas" bind:this={canvas} style="width: {width * scale}px; height: {height * scale}px; "
-        on:mousedown={handle_canvas_mouse_down}>
+           on:mousedown={handle_canvas_mouse_down}>
         {#each objects as obj (obj.id)}
           <!--overflow 배경-->
-          <div
-            class="object"
-            style="
-                left: {canvas_rect.left + obj.x + 1}px;
-                top: {canvas_rect.top + obj.y + 1}px;
-                width: {obj.width}px;
-                height: {obj.height}px;
-                background: {obj.color};
-                transform: rotate({obj.angle}deg);
-                position: fixed;
-                opacity: 0.5;
-              "></div>
+          <!--{#if obj.selected}-->
+          <!--  <div-->
+          <!--          class="object"-->
+          <!--          style="-->
+          <!--      left: {canvas_rect.left + obj.x + 1}px;-->
+          <!--      top: {canvas_rect.top + obj.y + 1}px;-->
+          <!--      width: {obj.width}px;-->
+          <!--      height: {obj.height}px;-->
+          <!--      background: {obj.color};-->
+          <!--      transform: rotate({obj.angle}deg);-->
+          <!--      position: fixed;-->
+          <!--      opacity: 0.5;-->
+          <!--    "></div>-->
+          <!--{/if}-->
           <!--본체-->
           <div
-            class="object"
-            style="
+                  class="object"
+                  style="
               left: {obj.x}px;
               top: {obj.y}px;
               width: {obj.width}px;
@@ -444,10 +442,11 @@
               background: {obj.color};
               transform: rotate({obj.angle}deg);
             "
+              on:click={() => select_object(obj)}
           >
             <div
-              class="text-element"
-              style="
+                    class="text-element"
+                    style="
                 font-size: {obj.fontSize}px;
                 font-family: {obj.fontFamily};
                 font-weight: {obj.fontWeight};
@@ -457,144 +456,123 @@
             >{@html obj.text}</div>
           </div>
           <!--입력용창-->
-          <div
-            class="object object-wrapper"
-            class:selected={obj.selected}
-            on:click={() => select_object(obj)}
-            on:mousedown={(e) => handle_mouse_down(e, obj, 'drag')}
-            style="
+          {#if obj.selected}
+            <div
+                    class="object object-wrapper"
+                    class:selected={obj.selected}
+                    on:click={() => select_object(obj)}
+                    on:mousedown={(e) => handle_mouse_down(e, obj, 'drag')}
+                    style="
                 left: {canvas_rect.left + obj.x + 1}px;
                 top: {canvas_rect.top + obj.y + 1}px;
                 width: {obj.width}px;
                 height: {obj.height}px;
                 transform: rotate({obj.angle}deg);
                 position: fixed;
+                z-index: 1;
               ">
-            <div
-              class="text-element"
-              contenteditable="true"
-              style="
+                <div class="background"
+                     style="
+                     width: 100%;
+                     height: 100%;
+                     opacity: 0.2;
+                     position: absolute;
+                     background: {obj.color};
+                     pointer-events : none;
+                "></div>
+              <div
+                      class="text-element"
+                      contenteditable="true"
+                      style="
                 font-size: {obj.fontSize}px;
                 font-family: {obj.fontFamily};
                 font-weight: {obj.fontWeight};
                 text-align: {obj.textAlign};
                 color: {obj.textColor};
               "
-              on:mousedown|stopPropagation
-              bind:innerText={obj.text}
-              on:focus={() => is_editing_text = true}
-              on:blur={() => { is_editing_text = false; objects = objects; }}
-              on:input={() => {
+                      on:mousedown|stopPropagation
+                      bind:innerText={obj.text}
+                      on:focus={() => is_editing_text = true}
+                      on:blur={() => { is_editing_text = false; objects = objects; }}
+                      on:input={() => {
                 objects = objects;
               }}
-            ></div>
-            {#if obj.selected}
-              <div
-                class="resize-handle resize-handle-tl"
-                on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'top-left')}
               ></div>
               <div
-                class="resize-handle resize-handle-t"
-                on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'top')}
+                      class="resize-handle resize-handle-tl"
+                      on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'top-left')}
               ></div>
               <div
-                class="resize-handle resize-handle-tr"
-                on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'top-right')}
+                      class="resize-handle resize-handle-t"
+                      on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'top')}
               ></div>
               <div
-                class="resize-handle resize-handle-l"
-                on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'left')}
+                      class="resize-handle resize-handle-tr"
+                      on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'top-right')}
               ></div>
               <div
-                class="resize-handle resize-handle-r"
-                on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'right')}
+                      class="resize-handle resize-handle-l"
+                      on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'left')}
               ></div>
               <div
-                class="resize-handle resize-handle-bl"
-                on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'bottom-left')}
+                      class="resize-handle resize-handle-r"
+                      on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'right')}
               ></div>
               <div
-                class="resize-handle resize-handle-b"
-                on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'bottom')}
+                      class="resize-handle resize-handle-bl"
+                      on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'bottom-left')}
               ></div>
               <div
-                class="resize-handle resize-handle-br"
-                on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'bottom-right')}
+                      class="resize-handle resize-handle-b"
+                      on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'bottom')}
               ></div>
               <div
-                class="rotate-handle"
-                style="
+                      class="resize-handle resize-handle-br"
+                      on:mousedown={(e) => handle_mouse_down(e, obj, 'resize', 'bottom-right')}
+              ></div>
+              <div
+                      class="rotate-handle"
+                      style="
                   {get_rotate_handle_position(obj)
                     ? 'top: -30px; bottom: unset;'
                     : 'top: unset; bottom: -30px;'}
                   left: 50%;
                   transform: translateX(-50%);"
-                on:mousedown={(e) => handle_mouse_down(e, obj, 'rotate')}
+                      on:mousedown={(e) => handle_mouse_down(e, obj, 'rotate')}
               ></div>
               {#if show_rotation_angle && obj.id === selected_object?.id}
                 <div class="rotation-angle">
                   {(Math.round(obj.angle)+360)%360}°
                 </div>
               {/if}
-
-            {/if}
-          </div>
-          {#if obj.selected}
-            <div
-              class="toolbox"
-              style="
-                position: fixed;
-                left: {canvas_rect.left + (obj.x + obj.width/2)}px;
-                top: {canvas_rect.top + (get_object_position(obj) ? (obj.y + obj.height + 10) : (obj.y - 40))}px;
-                transform: translateX(-50%);
-              "
-            >
-              <button class="tool-btn" on:click|stopPropagation={() => bring_to_front(obj)}>
-                맨 앞으로
-              </button>
-              <button class="tool-btn" on:click|stopPropagation={() => bring_forward(obj)}>
-                앞으로
-              </button>
-              <button class="tool-btn" on:click|stopPropagation={() => send_backward(obj)}>
-                뒤로
-              </button>
-              <button class="tool-btn" on:click|stopPropagation={() => send_to_back(obj)}>
-                맨 뒤로
-              </button>
-              <button class="tool-btn" on:click|stopPropagation={() => duplicate_object(obj)}>
-                복제
-              </button>
-              <button class="tool-btn" on:click|stopPropagation={() => delete_object(obj)}>
-                삭제
-              </button>
-              <input type="color" class="tool-btn"
-                     bind:value={obj.textColor}
-                     on:mousedown|stopPropagation
-                     on:focus={() => is_editing_text = true}
-                     on:blur={() => { is_editing_text = false; objects = objects; }}
-                     on:input={() => objects = [...objects]} />
-              <input type="number" class="tool-btn"
-                     bind:value={obj.fontSize}
-                     on:mousedown|stopPropagation
-                     on:focus={() => is_editing_text = true}
-                     on:blur={() => { is_editing_text = false; objects = objects; }}
-                     on:input={() => objects = [...objects]}
-                     style="width: 60px" />
-              <select class="tool-btn"
-                      bind:value={obj.textAlign}
-                      on:mousedown|stopPropagation
-                      on:change={() => objects = [...objects]}>
-                <option value="left">좌</option>
-                <option value="center">중</option>
-                <option value="right">우</option>
-              </select>
-              <button class="tool-btn" on:click|stopPropagation={() => {obj.fontWeight = obj.fontWeight === 'bold' ? 'normal' : 'bold'; objects = [...objects];}}>
-                <b>B</b>
-              </button>
             </div>
           {/if}
         {/each}
       </div>
+    </div>
+  </div>
+  <div class="object-toolbox">
+    <div class="tool-group">
+      <button on:click={undo} disabled={current_history_index <= 0}>실행취소</button>
+      <button on:click={redo} disabled={current_history_index >= history.length - 1}>되돌리기</button>
+      <button class="tool-btn" on:click|stopPropagation={() => bring_to_front(selected_object)}>
+        맨 앞으로
+      </button>
+      <button class="tool-btn" on:click|stopPropagation={() => bring_forward(selected_object)}>
+        앞으로
+      </button>
+      <button class="tool-btn" on:click|stopPropagation={() => send_backward(selected_object)}>
+        뒤로
+      </button>
+      <button class="tool-btn" on:click|stopPropagation={() => send_to_back(selected_object)}>
+        맨 뒤로
+      </button>
+      <button class="tool-btn" on:click|stopPropagation={() => duplicate_object(selected_object)}>
+        복제
+      </button>
+      <button class="tool-btn" on:click|stopPropagation={() => delete_object(selected_object)}>
+        삭제
+      </button>
     </div>
   </div>
 </div>
