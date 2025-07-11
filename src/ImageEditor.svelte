@@ -34,6 +34,7 @@
   let history = [];
   let current_history_index = 0;
   let is_history_action = false;
+  let is_editing_text = false;
 
   // 사각형 색상 팔레트
   const colors = [
@@ -196,7 +197,6 @@
 
   // 현재 상태를 히스토리에 저장하는 함수
   function save_to_history() {
-    if (is_history_action) return;
     history = history.slice(0, current_history_index + 1);
     history.push(JSON.stringify(objects));
     current_history_index = history.length - 1;
@@ -393,7 +393,8 @@
 
   // 6. 반응형 히스토리 저장(마우스 이벤트와 선택 제외)
   $: {
-    if (objects && !is_dragging && !is_resizing && !is_rotating && !is_history_action) {
+    if (objects && !is_dragging && !is_resizing && !is_rotating && !is_history_action && !is_editing_text) {
+      console.log("save")
       save_to_history();
     }
     if (is_history_action) {
@@ -481,8 +482,10 @@
               "
               on:mousedown|stopPropagation
               bind:innerText={obj.text}
+              on:focus={() => is_editing_text = true}
+              on:blur={() => { is_editing_text = false; objects = objects; }}
               on:input={() => {
-                objects = [...objects];
+                objects = objects;
               }}
             ></div>
             {#if obj.selected}
@@ -564,9 +567,23 @@
               <button class="tool-btn" on:click|stopPropagation={() => delete_object(obj)}>
                 삭제
               </button>
-              <input type="color" class="tool-btn" bind:value={obj.textColor} on:mousedown|stopPropagation on:input={() => objects = [...objects]} />
-              <input type="number" class="tool-btn" bind:value={obj.fontSize} on:mousedown|stopPropagation on:input={() => objects = [...objects]} style="width: 60px" />
-              <select class="tool-btn" bind:value={obj.textAlign} on:mousedown|stopPropagation on:change={() => objects = [...objects]}>
+              <input type="color" class="tool-btn"
+                     bind:value={obj.textColor}
+                     on:mousedown|stopPropagation
+                     on:focus={() => is_editing_text = true}
+                     on:blur={() => { is_editing_text = false; objects = objects; }}
+                     on:input={() => objects = [...objects]} />
+              <input type="number" class="tool-btn"
+                     bind:value={obj.fontSize}
+                     on:mousedown|stopPropagation
+                     on:focus={() => is_editing_text = true}
+                     on:blur={() => { is_editing_text = false; objects = objects; }}
+                     on:input={() => objects = [...objects]}
+                     style="width: 60px" />
+              <select class="tool-btn"
+                      bind:value={obj.textAlign}
+                      on:mousedown|stopPropagation
+                      on:change={() => objects = [...objects]}>
                 <option value="left">좌</option>
                 <option value="center">중</option>
                 <option value="right">우</option>
