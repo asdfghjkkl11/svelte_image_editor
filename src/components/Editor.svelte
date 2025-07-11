@@ -1,12 +1,14 @@
 <script>
-    import { onMount } from 'svelte';
+    import { onMount, createEventDispatcher } from 'svelte';
     import ImageObject from './ImageObject.svelte';
     import TextObject from './TextObject.svelte';
+
+    const dispatch = createEventDispatcher();
 
     // 1. 상수 및 상태 변수 선언
     export let width = 600; // 외부에서 받는 캔버스 너비
     export let height = 1800; // 외부에서 받는 캔버스 높이
-    let scale = 0.5; // 캔버스 스케일(확대/축소 비율)
+    export let scale = 0.5; // 캔버스 스케일(확대/축소 비율)
     let canvas_y = (height * scale) / 2; // 캔버스의 Y 중심 좌표(스케일 적용)
 
     // 오브젝트(사각형 등) 상태 배열
@@ -31,7 +33,7 @@
 
     // 히스토리(undo/redo) 관리용 배열 및 인덱스
     let history = [];
-    export let current_history_index = 0;
+    let current_history_index = 0;
     let is_history_action = false;
     let is_editing_text = false;
 
@@ -55,6 +57,9 @@
     let canvas_rect;
     let container_align = 'center';
 
+    // Single prop to trigger actions from parent
+    export let action = { type: null, payload: null };
+
     // 2. 유틸 함수
     // 랜덤 색상 반환
     function get_random_color() {
@@ -74,7 +79,7 @@
     }
 
     // 사각형을 추가하는 함수
-    export function add_text_object() {
+    function add_text_object() {
         const x = 50;
         const y = 50;
         const width = 300;
@@ -87,7 +92,7 @@
             width,
             height,
             angle: 0,
-            color: get_random_color(),
+            color: 'transparent', // 기본 색상으로 변경
             selected: true,
             text: '텍스트',
         };
@@ -97,15 +102,71 @@
         selected_object = new_text_object;
     }
 
+    // 텍스트 오브젝트 배경색 설정 함수
+    function set_text_object_background_color(color) {
+        if (selected_object && selected_object.type === 'text') {
+            selected_object.color = color;
+            objects = objects.map((obj) =>
+                obj.id === selected_object.id ? selected_object : obj,
+            );
+        }
+    }
+
+    // 이미지를 추가하는 함수
+    async function add_image_object(src) {
+        const img = new Image();
+        img.src = src;
+
+        await new Promise((resolve) => {
+            img.onload = resolve;
+        });
+
+        let img_width = img.naturalWidth * scale;
+        let img_height = img.naturalHeight * scale;
+
+        // 캔버스 크기를 초과하지 않도록 추가 스케일링
+        const canvas_scaled_width = width * scale;
+        const canvas_scaled_height = height * scale;
+
+        if (img_width > canvas_scaled_width || img_height > canvas_scaled_height) {
+            const width_ratio = canvas_scaled_width / img_width;
+            const height_ratio = canvas_scaled_height / img_height;
+            const ratio = Math.min(width_ratio, height_ratio);
+
+            img_width *= ratio;
+            img_height *= ratio;
+        }
+
+        const x = (canvas_scaled_width - img_width) / 2; // 캔버스 중앙에 배치
+        const y = (canvas_scaled_height - img_height) / 2;
+
+        const new_image_object = {
+            id: Date.now(),
+            type: 'image',
+            x,
+            y,
+            width: img_width,
+            height: img_height,
+            angle: 0,
+            src,
+            alt: 'Uploaded Image',
+            selected: true,
+        };
+        // 기존 선택 해제
+        objects = objects.map((obj) => ({ ...obj, selected: false }));
+        objects = [...objects, new_image_object];
+        selected_object = new_image_object;
+    }
+
     // 오브젝트(사각형 등)를 삭제하는 함수
-    export function delete_object() {
+    function delete_object() {
         if (!selected_object.id) return;
         objects = objects.filter((o) => o.id !== selected_object.id);
         selected_object = {};
     }
 
     // 오브젝트를 복제하는 함수
-    export function duplicate_object() {
+    function duplicate_object() {
         if (!selected_object.id) return;
         const new_obj = {
             ...selected_object,
@@ -121,7 +182,7 @@
     }
 
     // 오브젝트를 한 단계 앞으로 이동시키는 함수
-    export function bring_forward() {
+    function bring_forward() {
         if (!selected_object.id) return;
         const currentIndex = objects.findIndex(
             (o) => o.id === selected_object.id,
@@ -136,7 +197,7 @@
     }
 
     // 오브젝트를 한 단계 뒤로 이동시키는 함수
-    export function send_backward() {
+    function send_backward() {
         if (!selected_object.id) return;
         const currentIndex = objects.findIndex(
             (o) => o.id === selected_object.id,
@@ -151,7 +212,7 @@
     }
 
     // 오브젝트를 맨 앞으로 이동시키는 함수
-    export function bring_to_front() {
+    function bring_to_front() {
         if (!selected_object.id) return;
         const currentIndex = objects.findIndex(
             (o) => o.id === selected_object.id,
@@ -165,7 +226,7 @@
     }
 
     // 오브젝트를 맨 뒤로 이동시키는 함수
-    export function send_to_back() {
+    function send_to_back() {
         if (!selected_object.id) return;
         const currentIndex = objects.findIndex(
             (o) => o.id === selected_object.id,
@@ -190,33 +251,36 @@
         history = history.slice(0, current_history_index + 1);
         history.push(JSON.stringify(objects));
         current_history_index = history.length - 1;
+        dispatch('history_updated', { current_history_index, history_length: history.length });
     }
 
     // 실행취소(undo) 함수
-    export function undo() {
+    function undo() {
         if (current_history_index > 0) {
             is_history_action = true;
             current_history_index--;
             objects = JSON.parse(history[current_history_index]);
+            dispatch('history_updated', { current_history_index, history_length: history.length });
         }
     }
 
     // 다시실행(redo) 함수
-    export function redo() {
+    function redo() {
         if (current_history_index < history.length - 1) {
             is_history_action = true;
             current_history_index++;
             objects = JSON.parse(history[current_history_index]);
+            dispatch('history_updated', { current_history_index, history_length: history.length });
         }
     }
 
     // 텍스트 서식 적용 함수
-    export function format_text(command, value = null) {
+    function format_text(command, value = null) {
         document.execCommand(command, false, value);
         objects = objects;
     }
 
-    export function change_font_size(value) {
+    function change_font_size(value) {
         document.execCommand('fontSize', false, '7');
         let fontElements =
             selected_object.text_element.querySelector('font[size="7"]');
@@ -231,8 +295,58 @@
         objects = objects;
     }
 
-    export function set_is_editing_text(value) {
+    function set_is_editing_text(value) {
         is_editing_text = value;
+    }
+
+    // Reactive declarations to trigger functions based on props
+    $: if (action.type) {
+        switch (action.type) {
+            case 'add_text_object':
+                add_text_object();
+                break;
+            case 'add_image_object':
+                add_image_object(action.payload);
+                break;
+            case 'delete_object':
+                delete_object();
+                break;
+            case 'duplicate_object':
+                duplicate_object();
+                break;
+            case 'bring_forward':
+                bring_forward();
+                break;
+            case 'send_backward':
+                send_backward();
+                break;
+            case 'bring_to_front':
+                bring_to_front();
+                break;
+            case 'send_to_back':
+                send_to_back();
+                break;
+            case 'undo':
+                undo();
+                break;
+            case 'redo':
+                redo();
+                break;
+            case 'format_text':
+                format_text(action.payload.command, action.payload.value);
+                break;
+            case 'change_font_size':
+                change_font_size(action.payload);
+                break;
+            case 'set_text_object_background_color':
+                set_text_object_background_color(action.payload);
+                break;
+            case 'set_is_editing_text':
+                set_is_editing_text(action.payload);
+                break;
+        }
+        // Reset action to prevent re-triggering
+        action = { type: null, payload: null };
     }
 
     // 리사이즈 동작을 처리하는 함수
