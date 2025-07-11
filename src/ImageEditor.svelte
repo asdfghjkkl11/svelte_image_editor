@@ -1,5 +1,5 @@
 <script>
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount } from 'svelte';
 
   // 1. 상수 및 상태 변수 선언
   export let width = 600; // 외부에서 받는 캔버스 너비
@@ -24,7 +24,6 @@
   let start_height = 0;
   let start_obj_x = 0;
   let start_obj_y = 0;
-  let start_angle = 0;
   let resize_edge = null;
   let min_size = 20;
   let show_rotation_angle = false;  // 회전 각도 표시 여부
@@ -50,18 +49,6 @@
     '#7986cb'  // 인디고색
   ];
 
-  // 리사이즈 방향 정의
-  const directions = {
-    'top-left': { x: -1, y: -1 },
-    'top': { x: 0, y: -1 },
-    'top-right': { x: 1, y: -1 },
-    'left': { x: -1, y: 0 },
-    'right': { x: 1, y: 0 },
-    'bottom-left': { x: -1, y: 1 },
-    'bottom': { x: 0, y: 1 },
-    'bottom-right': { x: 1, y: 1 }
-  };
-
   let canvas_wrapper; // .canvas-wrapper DOM 참조
   let canvas_container; // .canvas-container DOM 참조
   let container_align = 'center'; // 동적으로 바뀌는 align-items 값
@@ -72,14 +59,6 @@
   // 랜덤 색상 반환
   function get_random_color() {
     return colors[Math.floor(Math.random() * colors.length)];
-  }
-
-  // 사각형별 위치(top/bottom) 반환
-  function get_object_position(obj) {
-    const center_y = obj.y + obj.height / 2;
-
-    // 캔버스 기준 y=canvas_y보다 위면 아래쪽에, 아니면 위쪽에
-    return (center_y < canvas_y);
   }
 
   // 사각형별 rotate-handle 위치(top/bottom) 반환
@@ -296,6 +275,7 @@
     const dx = mouse_x - center_x;
     const dy = mouse_y - center_y;
     let angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+
     if (!rotate_handle_position) {
       angle += 180;
     }
@@ -306,8 +286,10 @@
   // 마우스 다운(드래그/리사이즈/회전 시작) 처리 함수
   function handle_mouse_down(event, obj, type, edge = null) {
     if (!obj.selected) return;
+
     selected_object = obj; // 항상 최신 객체 정보를 사용하도록 업데이트
     event.stopPropagation();
+
     if (type === 'drag') {
       is_dragging = true;
       start_x = event.clientX - obj.x;
@@ -324,12 +306,6 @@
     } else if (type === 'rotate') {
       is_rotating = true;
       show_rotation_angle = true;
-      const center_x = obj.x + obj.width / 2;
-      const center_y = obj.y + obj.height / 2;
-      start_angle = Math.atan2(
-        event.clientY - center_y,
-        event.clientX - center_x
-      ) * 180 / Math.PI;
       rotate_handle_position = get_rotate_handle_position(obj);
     }
   }
@@ -337,6 +313,7 @@
   // 마우스 이동(드래그/리사이즈/회전) 처리 함수
   function handle_mouse_move(event) {
     if (!selected_object) return;
+
     if (is_dragging) {
       const new_x = event.clientX - start_x;
       const new_y = event.clientY - start_y;
@@ -375,8 +352,10 @@
   // 캔버스와 wrapper의 높이를 비교해 align-items를 동적으로 조정하는 함수
   function update_container_align() {
     if (!canvas_wrapper || !canvas_container) return;
+
     const wrapper_height = canvas_wrapper.clientHeight;
     const canvas_height = height * scale;
+
     // 캔버스가 wrapper보다 크면 위에서부터, 아니면 가운데
     container_align = canvas_height > wrapper_height ? 'flex-start' : 'center';
     canvas_rect = canvas.getBoundingClientRect();
@@ -397,15 +376,11 @@
   // 6. 반응형 히스토리 저장(마우스 이벤트와 선택 제외)
   $: {
     if (objects && !is_dragging && !is_resizing && !is_rotating && !is_history_action && !is_editing_text) {
-      console.log("save")
       save_to_history();
     }
     if (is_history_action) {
       is_history_action = false;
     }
-  }
-  $:{
-      console.log(history)
   }
 </script>
 
