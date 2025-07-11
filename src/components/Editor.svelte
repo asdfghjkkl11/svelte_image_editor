@@ -31,7 +31,7 @@
 
     // 히스토리(undo/redo) 관리용 배열 및 인덱스
     let history = [];
-    let current_history_index = 0;
+    export let current_history_index = 0;
     let is_history_action = false;
     let is_editing_text = false;
 
@@ -453,7 +453,7 @@
             on:mousedown={handle_canvas_mouse_down}
         >
             {#each objects as obj (obj.id)}
-                {#if obj.type === 'rect'}
+                {#if obj.type === 'text'}
                     <TextObject
                         {obj}
                         {canvas_rect}

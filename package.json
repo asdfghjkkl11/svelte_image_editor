@@ -5,7 +5,7 @@
   "type": "module",
   "main": "./dist/index.umd.js",
   "module": "./dist/index.es.js",
-  "svelte": "./src/ImageEditor.svelte",
+  "svelte": "./src/App.svelte",
   "files": [
     "dist",
     "src"
