@@ -12,9 +12,9 @@ npm install svelte-image-editor
 
 ```svelte
 <script>
-  import ImageEditor from 'svelte-image-editor';
-  
-  const imageUrl = 'path/to/your/image.jpg';
+    import ImageEditor from 'svelte-image-editor';
+
+    const imageUrl = 'path/to/your/image.jpg';
 </script>
 
 <ImageEditor {imageUrl} width={800} height={600} />

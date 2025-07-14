@@ -1,59 +1,87 @@
 <script>
-    import './global.css';
-    import { onMount } from 'svelte';
-    import ImageEditor from './components/ImageEditor.svelte';
+	import './global.css';
+	import ImageEditor from './components/ImageEditor.svelte';
 
-    let option = {
-        width: 800,
-        height: 600,
-        scale: 1,
-    };
+	// ImageEditor 컴포넌트에 바인딩될 인스턴스
+	let image_editor;
 
-    let image_editor;
+	// 업로드된 이미지 파일의 데이터 URL을 저장하는 배열
+	let uploaded_images = [];
+	// 현재 히스토리 인덱스 (undo/redo UI 활성화/비활성화에 사용)
+	let current_history_index;
+	// 전체 히스토리 길이 (undo/redo UI 활성화/비활성화에 사용)
+	let history_length;
 
-    let uploaded_images = [];
-    let current_history_index;
-    let history_length;
+	// ImageEditor 컴포넌트에 전달할 옵션 객체
+	const option = {
+		width: 800,
+		height: 600,
+		scale: 1,
+	};
 
-    function handle_image_upload(event) {
-        const file = event.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                uploaded_images = [...uploaded_images, e.target.result];
-            };
-            reader.readAsDataURL(file);
-        }
-    }
+	/**
+	 * 파일 입력(input) 변경 시 호출되는 이벤트 핸들러.
+	 * 선택된 이미지 파일을 읽어 데이터 URL로 변환하고 `uploaded_images` 배열에 추가합니다.
+	 * @param {Event} event - 파일 입력 변경 이벤트
+	 */
+	function handle_image_upload(event) {
+		const file = event.target.files[0];
+		if (file) {
+			const reader = new FileReader();
+			reader.onload = (e) => {
+				uploaded_images = [...uploaded_images, e.target.result];
+			};
+			reader.readAsDataURL(file);
+		}
+	}
 
-    function add_text_object() {
-        image_editor.add_text_object();
-    }
+	/**
+	 * '텍스트 추가' 버튼 클릭 시 ImageEditor 컴포넌트의 텍스트 객체 추가 함수를 호출합니다.
+	 */
+	function add_text_object() {
+		image_editor.add_text_object();
+	}
 
-    function add_image_to_editor(src) {
-        image_editor.add_image_object(src);
-    }
+	/**
+	 * 업로드된 이미지를 클릭 시 ImageEditor 컴포넌트의 이미지 객체 추가 함수를 호출합니다.
+	 * @param {string} src - 추가할 이미지의 데이터 URL
+	 */
+	function add_image_to_editor(src) {
+		image_editor.add_image_object(src);
+	}
 
-    async function handle_action(type, payload = null) {
-        return await image_editor.action(type, payload);
-    }
+	/**
+	 * ImageEditor의 다양한 액션을 호출하는 범용 함수.
+	 * @param {string} type - 실행할 액션의 종류 (예: 'undo', 'redo', 'delete_object')
+	 * @param {any} [payload=null] - 액션에 필요한 데이터
+	 * @returns {Promise<any>} 액션 실행 결과
+	 */
+	async function handle_action(type, payload = null) {
+		return await image_editor.action(type, payload);
+	}
 
-    async function save_image(){
-        // let test = await handle_action('save','obj');
-        let data_url = await handle_action('save','png');
-        let a = document.createElement("a");
-        a.download = "IMAGE.png";
-        a.href = data_url;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-    }
+	/**
+	 * '저장' 버튼 클릭 시 캔버스 내용을 PNG 이미지로 저장합니다.
+	 */
+	async function save_image() {
+		// ImageEditor의 'save' 액션을 호출하여 이미지 데이터 URL을 받음
+		let data_url = await handle_action('save', 'png');
+		// a 태그를 동적으로 생성하여 다운로드 링크로 사용
+		let a = document.createElement('a');
+		a.download = 'IMAGE.png';
+		a.href = data_url;
+		document.body.appendChild(a);
+		a.click(); // 클릭 이벤트를 발생시켜 다운로드 실행
+		document.body.removeChild(a); // 사용된 a 태그 제거
+	}
 </script>
 
 <div class="editor-container">
     <div class="object-toolbox">
         <div class="tool-group">
-            <button class="tool-btn" on:click={add_text_object}>텍스트 추가</button>
+            <button class="tool-btn" on:click={add_text_object}
+                >텍스트 추가</button
+            >
             <label for="image-upload" class="tool-btn">이미지 추가</label>
             <input
                 type="file"
@@ -88,24 +116,28 @@
     />
     <div class="object-toolbox">
         <div class="tool-group">
-            <button on:click={save_image}
-            >저장</button>
-            <button on:click={() => handle_action('undo')}
-                disabled={current_history_index <= 0}
-            >실행취소</button>
-            <button on:click={() => handle_action('redo')}
+            <button on:click={save_image}>저장</button>
+            <button
+                on:click={() => handle_action('undo')}
+                disabled={current_history_index <= 0}>실행취소</button
+            >
+            <button
+                on:click={() => handle_action('redo')}
                 disabled={current_history_index >= history_length - 1}
-            >되돌리기</button>
+                >되돌리기</button
+            >
             <button
                 class="tool-btn"
                 on:click|stopPropagation={() => handle_action('bring_to_front')}
             >
-                맨 앞으로</button>
+                맨 앞으로</button
+            >
             <button
                 class="tool-btn"
                 on:click|stopPropagation={() => handle_action('bring_forward')}
             >
-                앞으로</button>
+                앞으로</button
+            >
             <button
                 class="tool-btn"
                 on:click|stopPropagation={() => handle_action('send_backward')}

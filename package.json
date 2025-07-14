@@ -1,46 +1,46 @@
 {
-  "name": "svelte-image-editor",
-  "version": "0.0.1",
-  "description": "A simple image editor component for Svelte",
-  "type": "module",
-  "main": "./dist/index.umd.js",
-  "module": "./dist/index.es.js",
-  "svelte": "./src/App.svelte",
-  "files": [
-    "dist",
-    "src"
-  ],
-  "exports": {
-    ".": {
-      "import": "./dist/index.es.js",
-      "require": "./dist/index.umd.js",
-      "svelte": "./src/ImageEditor.svelte"
+    "name": "svelte-image-editor",
+    "version": "0.0.1",
+    "description": "A simple image editor component for Svelte",
+    "type": "module",
+    "main": "./dist/index.umd.js",
+    "module": "./dist/index.es.js",
+    "svelte": "./src/App.svelte",
+    "files": [
+        "dist",
+        "src"
+    ],
+    "exports": {
+        ".": {
+            "import": "./dist/index.es.js",
+            "require": "./dist/index.umd.js",
+            "svelte": "./src/ImageEditor.svelte"
+        }
+    },
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "preview": "vite preview",
+        "package": "svelte-package",
+        "format": "prettier --write \"src/**/*.svelte\""
+    },
+    "keywords": [
+        "svelte",
+        "image-editor",
+        "canvas"
+    ],
+    "author": "",
+    "license": "MIT",
+    "devDependencies": {
+        "@sveltejs/package": "^2.3.12",
+        "@sveltejs/vite-plugin-svelte": "^2.4.0",
+        "prettier": "^3.6.2",
+        "prettier-plugin-svelte": "^3.4.0",
+        "svelte": "^3.55.0",
+        "svelte-preprocess": "^4.10.7",
+        "vite": "^4.3.9"
+    },
+    "dependencies": {
+        "html-to-image": "^1.11.13"
     }
-  },
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "package": "svelte-package",
-    "format": "prettier --write \"src/**/*.svelte\""
-  },
-  "keywords": [
-    "svelte",
-    "image-editor",
-    "canvas"
-  ],
-  "author": "",
-  "license": "MIT",
-  "devDependencies": {
-    "@sveltejs/package": "^2.3.12",
-    "@sveltejs/vite-plugin-svelte": "^2.4.0",
-    "prettier": "^3.6.2",
-    "prettier-plugin-svelte": "^3.4.0",
-    "svelte": "^3.55.0",
-    "svelte-preprocess": "^4.10.7",
-    "vite": "^4.3.9"
-  },
-  "dependencies": {
-    "html-to-image": "^1.11.13"
-  }
 }
