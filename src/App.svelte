@@ -1,7 +1,7 @@
 <script>
-    import "./global.css";
-    import {onMount} from "svelte";
-    import ImageEditor from "./components/ImageEditor.svelte";
+    import './global.css';
+    import { onMount } from 'svelte';
+    import ImageEditor from './components/ImageEditor.svelte';
 
     let option = {
         width: 800,
@@ -34,8 +34,19 @@
         image_editor.add_image_object(src);
     }
 
-    function handle_action(type, payload = null) {
-        image_editor.action( type, payload);
+    async function handle_action(type, payload = null) {
+        return await image_editor.action(type, payload);
+    }
+
+    async function save_image(){
+        // let test = await handle_action('save','obj');
+        let data_url = await handle_action('save','png');
+        let a = document.createElement("a");
+        a.download = "IMAGE.png";
+        a.href = data_url;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
     }
 </script>
 
@@ -45,11 +56,11 @@
             <button class="tool-btn" on:click={add_text_object}>텍스트 추가</button>
             <label for="image-upload" class="tool-btn">이미지 추가</label>
             <input
-                    type="file"
-                    id="image-upload"
-                    accept="image/*"
-                    on:change={handle_image_upload}
-                    style="display: none;"
+                type="file"
+                id="image-upload"
+                accept="image/*"
+                on:change={handle_image_upload}
+                style="display: none;"
             />
         </div>
 
@@ -58,7 +69,10 @@
                 <h3>업로드된 이미지</h3>
                 <div class="image-list">
                     {#each uploaded_images as image_src}
-                        <div class="image-item" on:click={() => add_image_to_editor(image_src)}>
+                        <div
+                            class="image-item"
+                            on:click={() => add_image_to_editor(image_src)}
+                        >
                             <img src={image_src} alt="Uploaded" />
                         </div>
                     {/each}
@@ -66,164 +80,162 @@
             </div>
         {/if}
     </div>
-    <ImageEditor {option}
-                 bind:this={image_editor}
-                 bind:current_history_index={current_history_index}
-                 bind:history_length={history_length} />
-
+    <ImageEditor
+        {option}
+        bind:this={image_editor}
+        bind:current_history_index
+        bind:history_length
+    />
     <div class="object-toolbox">
         <div class="tool-group">
-            <button
-                    on:click={() => handle_action('undo')}
-                    disabled={current_history_index <= 0}>실행취소</button>
-            <button
-                    on:click={() => handle_action('redo')}
-                    disabled={current_history_index >= history_length - 1}
+            <button on:click={save_image}
+            >저장</button>
+            <button on:click={() => handle_action('undo')}
+                disabled={current_history_index <= 0}
+            >실행취소</button>
+            <button on:click={() => handle_action('redo')}
+                disabled={current_history_index >= history_length - 1}
             >되돌리기</button>
             <button
-                    class="tool-btn"
-                    on:click|stopPropagation={() =>
-                handle_action('bring_to_front')}
+                class="tool-btn"
+                on:click|stopPropagation={() => handle_action('bring_to_front')}
             >
-                맨 앞으로
-            </button>
+                맨 앞으로</button>
             <button
-                    class="tool-btn"
-                    on:click|stopPropagation={() =>
-                handle_action('bring_forward')}
+                class="tool-btn"
+                on:click|stopPropagation={() => handle_action('bring_forward')}
             >
-                앞으로
-            </button>
+                앞으로</button>
             <button
-                    class="tool-btn"
-                    on:click|stopPropagation={() =>
-                handle_action('send_backward')}
+                class="tool-btn"
+                on:click|stopPropagation={() => handle_action('send_backward')}
             >
                 뒤로
             </button>
             <button
-                    class="tool-btn"
-                    on:click|stopPropagation={() =>
-                handle_action('send_to_back')}
+                class="tool-btn"
+                on:click|stopPropagation={() => handle_action('send_to_back')}
             >
                 맨 뒤로
             </button>
             <button
-                    class="tool-btn"
-                    on:click|stopPropagation={() =>
-                handle_action('duplicate_object')}
+                class="tool-btn"
+                on:click|stopPropagation={() =>
+                    handle_action('duplicate_object')}
             >
                 복제
             </button>
             <button
-                    class="tool-btn"
-                    on:click|stopPropagation={() =>
-                handle_action('delete_object')}
+                class="tool-btn"
+                on:click|stopPropagation={() => handle_action('delete_object')}
             >
                 삭제
             </button>
             <button
-                    class="tool-btn"
-                    on:click|stopPropagation={() =>
-                handle_action('format_text', { command: 'bold' })}
+                class="tool-btn"
+                on:click|stopPropagation={() =>
+                    handle_action('format_text', { command: 'bold' })}
             >
                 <b>B</b>
             </button>
             <button
-                    class="tool-btn"
-                    on:click|stopPropagation={() =>
-                handle_action('format_text', { command: 'italic' })}
+                class="tool-btn"
+                on:click|stopPropagation={() =>
+                    handle_action('format_text', { command: 'italic' })}
             >
                 <i>I</i>
             </button>
             <button
-                    class="tool-btn"
-                    on:click|stopPropagation={() =>
-                handle_action('format_text', { command: 'underline' })}
+                class="tool-btn"
+                on:click|stopPropagation={() =>
+                    handle_action('format_text', { command: 'underline' })}
             >
                 <u>U</u>
             </button>
             <button
-                    class="tool-btn"
-                    on:click|stopPropagation={() =>
-                handle_action('format_text', { command: 'strikeThrough' })}
+                class="tool-btn"
+                on:click|stopPropagation={() =>
+                    handle_action('format_text', { command: 'strikeThrough' })}
             >
                 <s>S</s>
             </button>
             <button
-                    class="tool-btn"
-                    on:click|stopPropagation={() =>
-                handle_action('format_text', { command: 'justifyLeft' })}
+                class="tool-btn"
+                on:click|stopPropagation={() =>
+                    handle_action('format_text', { command: 'justifyLeft' })}
             >
                 왼쪽 정렬
             </button>
             <button
-                    class="tool-btn"
-                    on:click|stopPropagation={() =>
-                handle_action('format_text', { command: 'justifyCenter' })}
+                class="tool-btn"
+                on:click|stopPropagation={() =>
+                    handle_action('format_text', { command: 'justifyCenter' })}
             >
                 가운데 정렬
             </button>
             <button
-                    class="tool-btn"
-                    on:click|stopPropagation={() =>
-                handle_action('format_text', { command: 'justifyRight' })}
+                class="tool-btn"
+                on:click|stopPropagation={() =>
+                    handle_action('format_text', { command: 'justifyRight' })}
             >
                 오른쪽 정렬
             </button>
             <label class="tool-label">
                 <span>글자색</span>
                 <input
-                        type="color"
-                        class="tool-btn"
-                        on:input={(e) =>
-                    handle_action('format_text', {
-                        command: 'foreColor',
-                        value: e.target.value,
-                    })}
-                        on:mousedown|stopPropagation
-                        on:focus={() => handle_action('text_edit_start')}
-                        on:blur={() => handle_action('text_edit_end')}
+                    type="color"
+                    class="tool-btn"
+                    on:input={(e) =>
+                        handle_action('format_text', {
+                            command: 'foreColor',
+                            value: e.target.value,
+                        })}
+                    on:mousedown|stopPropagation
+                    on:focus={() => handle_action('text_edit_start')}
+                    on:blur={() => handle_action('text_edit_end')}
                 />
             </label>
             <label class="tool-label">
                 <span>글자 배경색</span>
                 <input
-                        type="color"
-                        class="tool-btn"
-                        on:input={(e) =>
-                    handle_action('format_text', {
-                        command: 'backColor',
-                        value: e.target.value,
-                    })}
-                        on:mousedown|stopPropagation
-                        on:focus={() => handle_action('text_edit_start')}
-                        on:blur={() => handle_action('text_edit_end')}
+                    type="color"
+                    class="tool-btn"
+                    on:input={(e) =>
+                        handle_action('format_text', {
+                            command: 'backColor',
+                            value: e.target.value,
+                        })}
+                    on:mousedown|stopPropagation
+                    on:focus={() => handle_action('text_edit_start')}
+                    on:blur={() => handle_action('text_edit_end')}
                 />
             </label>
             <label class="tool-label">
                 <span>배경색</span>
                 <input
-                        type="color"
-                        class="tool-btn"
-                        on:input={(e) =>
-                    handle_action('set_text_object_background_color', e.target.value)}
-                        on:mousedown|stopPropagation
-                        on:focus={() => handle_action('text_edit_start')}
-                        on:blur={() => handle_action('text_edit_end')}
+                    type="color"
+                    class="tool-btn"
+                    on:input={(e) =>
+                        handle_action(
+                            'set_text_object_background_color',
+                            e.target.value,
+                        )}
+                    on:mousedown|stopPropagation
+                    on:focus={() => handle_action('text_edit_start')}
+                    on:blur={() => handle_action('text_edit_end')}
                 />
             </label>
             <label class="tool-label">
                 <span>글자크기</span>
                 <select
-                        class="tool-btn"
-                        on:change={(e) =>
-                handle_action('change_font_size', {
-                    value: e.target.value,
-                })}
-                        on:mousedown|stopPropagation
-                        on:focus={() => handle_action('text_edit_start')}
-                        on:blur={() => handle_action('text_edit_end')}
+                    class="tool-btn"
+                    on:change={(e) =>
+                        handle_action('change_font_size', {
+                            value: e.target.value,
+                        })}
+                    on:mousedown|stopPropagation
+                    on:focus={() => handle_action('text_edit_start')}
+                    on:blur={() => handle_action('text_edit_end')}
                 >
                     <option value="8">8</option>
                     <option value="9">9</option>
@@ -246,15 +258,15 @@
             <label class="tool-label">
                 <span>폰트</span>
                 <select
-                        class="tool-btn"
-                        on:change={(e) =>
-                            handle_action('format_text', {
-                                command: 'fontName',
-                                value: e.target.value,
-                            })}
-                        on:mousedown|stopPropagation
-                        on:focus={() => handle_action('text_edit_start')}
-                        on:blur={() => handle_action('text_edit_end')}
+                    class="tool-btn"
+                    on:change={(e) =>
+                        handle_action('format_text', {
+                            command: 'fontName',
+                            value: e.target.value,
+                        })}
+                    on:mousedown|stopPropagation
+                    on:focus={() => handle_action('text_edit_start')}
+                    on:blur={() => handle_action('text_edit_end')}
                 >
                     <option value="Arial">Arial</option>
                     <option value="Verdana">Verdana</option>
@@ -359,15 +371,15 @@
         background: #f5f5f5;
         border-color: #ccc;
     }
-    .tool-label{
+    .tool-label {
         display: flex;
         align-items: center;
         gap: 8px;
     }
-    .tool-label > span{
+    .tool-label > span {
         flex-shrink: 0;
     }
-    .tool-label .tool-btn{
+    .tool-label .tool-btn {
         flex: 1;
     }
 

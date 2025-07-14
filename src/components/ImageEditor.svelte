@@ -1,7 +1,8 @@
 <script>
     import { onMount } from 'svelte';
-    import ImageObject from "./ImageObject.svelte";
-    import TextObject from "./TextObject.svelte";
+    import ImageObject from './ImageObject.svelte';
+    import TextObject from './TextObject.svelte';
+    import * as htmlToImage from 'html-to-image';
 
     export let option;
 
@@ -29,15 +30,61 @@
 
     option = {
         ...default_option,
-        ...option
+        ...option,
     };
 
     export let history_length = 0;
 
-    let editorAction = {type: null, payload: null};
-
-    export function action(type, payload) {
-        editorAction = {type: type, payload: payload};
+    export async function action(type, payload) {
+        switch (type) {
+            case 'add_text_object':
+                add_text_object();
+                break;
+            case 'add_image_object':
+                add_image_object(payload);
+                break;
+            case 'delete_object':
+                delete_object();
+                break;
+            case 'duplicate_object':
+                duplicate_object();
+                break;
+            case 'bring_forward':
+                bring_forward();
+                break;
+            case 'send_backward':
+                send_backward();
+                break;
+            case 'bring_to_front':
+                bring_to_front();
+                break;
+            case 'send_to_back':
+                send_to_back();
+                break;
+            case 'undo':
+                undo();
+                break;
+            case 'redo':
+                redo();
+                break;
+            case 'format_text':
+                format_text(
+                    payload.command,
+                    payload.value,
+                );
+                break;
+            case 'change_font_size':
+                change_font_size(payload);
+                break;
+            case 'set_text_object_background_color':
+                set_text_object_background_color(payload);
+                break;
+            case 'set_is_editing_text':
+                set_is_editing_text(payload);
+                break;
+            case 'save':
+                return await save_image(payload);
+        }
     }
 
     let width = option.width; // 외부에서 받는 캔버스 너비
@@ -108,7 +155,7 @@
             text: '텍스트',
         };
         // 기존 선택 해제
-        objects = objects.map((obj) => ({...obj, selected: false}));
+        objects = objects.map((obj) => ({ ...obj, selected: false }));
         objects = [...objects, new_text_object];
         selected_object = new_text_object;
     }
@@ -139,7 +186,10 @@
         const canvas_scaled_width = width * scale;
         const canvas_scaled_height = height * scale;
 
-        if (img_width > canvas_scaled_width || img_height > canvas_scaled_height) {
+        if (
+            img_width > canvas_scaled_width ||
+            img_height > canvas_scaled_height
+        ) {
             const width_ratio = canvas_scaled_width / img_width;
             const height_ratio = canvas_scaled_height / img_height;
             const ratio = Math.min(width_ratio, height_ratio);
@@ -164,7 +214,7 @@
             selected: true,
         };
         // 기존 선택 해제
-        objects = objects.map((obj) => ({...obj, selected: false}));
+        objects = objects.map((obj) => ({ ...obj, selected: false }));
         objects = [...objects, new_image_object];
         selected_object = new_image_object;
     }
@@ -187,7 +237,7 @@
             selected: true,
         };
         // 기존 선택 해제
-        objects = objects.map((o) => ({...o, selected: false}));
+        objects = objects.map((o) => ({ ...o, selected: false }));
         objects = [...objects, new_obj];
         selected_object = new_obj;
     }
@@ -252,7 +302,7 @@
 
     // 오브젝트를 선택하는 함수
     function select_object(obj) {
-        objects = objects.map((o) => ({...o, selected: o.id === obj.id}));
+        objects = objects.map((o) => ({ ...o, selected: o.id === obj.id }));
         selected_object = obj;
         is_history_action = true;
     }
@@ -287,13 +337,13 @@
 
     // 텍스트 서식 적용 함수
     function format_text(command, value = null) {
-        document.execCommand("styleWithCSS", true, null);
+        document.execCommand('styleWithCSS', true, null);
         document.execCommand(command, false, value);
         objects = objects;
     }
 
     function change_font_size(value) {
-        document.execCommand("styleWithCSS", true, null);
+        document.execCommand('styleWithCSS', true, null);
         document.execCommand('fontSize', false, '7');
 
         let text = selected_object.text_element.innerHTML;
@@ -307,56 +357,6 @@
 
     function set_is_editing_text(value) {
         is_editing_text = value;
-    }
-
-    // Reactive declarations to trigger functions based on props
-    $: if (editorAction.type) {
-        switch (editorAction.type) {
-            case 'add_text_object':
-                add_text_object();
-                break;
-            case 'add_image_object':
-                add_image_object(editorAction.payload);
-                break;
-            case 'delete_object':
-                delete_object();
-                break;
-            case 'duplicate_object':
-                duplicate_object();
-                break;
-            case 'bring_forward':
-                bring_forward();
-                break;
-            case 'send_backward':
-                send_backward();
-                break;
-            case 'bring_to_front':
-                bring_to_front();
-                break;
-            case 'send_to_back':
-                send_to_back();
-                break;
-            case 'undo':
-                undo();
-                break;
-            case 'redo':
-                redo();
-                break;
-            case 'format_text':
-                format_text(editorAction.payload.command, editorAction.payload.value);
-                break;
-            case 'change_font_size':
-                change_font_size(editorAction.payload);
-                break;
-            case 'set_text_object_background_color':
-                set_text_object_background_color(editorAction.payload);
-                break;
-            case 'set_is_editing_text':
-                set_is_editing_text(editorAction.payload);
-                break;
-        }
-        // Reset action to prevent re-triggering
-        editorAction = {type: null, payload: null};
     }
 
     // 리사이즈 동작을 처리하는 함수
@@ -377,13 +377,13 @@
         const dir_x = edge.includes('left')
             ? -1
             : edge.includes('right')
-                ? 1
-                : 0;
+              ? 1
+              : 0;
         const dir_y = edge.includes('top')
             ? -1
             : edge.includes('bottom')
-                ? 1
-                : 0;
+              ? 1
+              : 0;
 
         // 피벗(반대편 핸들) 위치 계산 (월드 좌표계)
         const pivot_local_x = (-dir_x * start_width) / 2;
@@ -519,7 +519,7 @@
     function handle_canvas_mouse_down(event) {
         if (event.target === canvas) {
             selected_object = {};
-            objects = objects.map((o) => ({...o, selected: false}));
+            objects = objects.map((o) => ({ ...o, selected: false }));
         }
     }
 
@@ -532,6 +532,25 @@
         container_align =
             canvas_height > wrapper_height ? 'flex-start' : 'center';
         canvas_rect = canvas.getBoundingClientRect();
+    }
+
+    //이미지로 저장
+    async function save_image(type = "png"){
+        switch (type) {
+            case "png":
+                return htmlToImage.toPng(canvas);
+            case "jpg":
+            case "jpeg":
+                return htmlToImage.toJpeg(canvas);
+            case "svg":
+                return htmlToImage.toSvg(canvas);
+            case "blob":
+                return htmlToImage.toBlob(canvas);
+            case "obj":
+                return JSON.parse(JSON.stringify(history[current_history_index]));
+            default:
+                return "";
+        }
     }
 
     onMount(() => {
@@ -562,55 +581,58 @@
     }
 </script>
 
-<svelte:window on:mousemove={handle_mouse_move} on:mouseup={handle_mouse_up}/>
+<svelte:window on:mousemove={handle_mouse_move} on:mouseup={handle_mouse_up} />
 
 <div class="canvas-wrapper" bind:this={canvas_wrapper}>
     <div
-            class="canvas-container"
-            bind:this={canvas_container}
-            style="display: flex; align-items: {container_align}; justify-content: center; min-height: 100%; width: 100%;"
+        class="canvas-container"
+        bind:this={canvas_container}
+        style="display: flex; align-items: {container_align}; justify-content: center; min-height: 100%; width: 100%;"
     >
+        <div class="canvas-bg"
+             style="width: {width * scale}px; height: {height * scale}px; "
+        ></div>
         <div
-                class="canvas"
-                bind:this={canvas}
-                style="width: {width * scale}px; height: {height * scale}px; "
-                on:mousedown={handle_canvas_mouse_down}
+            class="canvas"
+            bind:this={canvas}
+            style="width: {width * scale}px; height: {height * scale}px; "
+            on:mousedown={handle_canvas_mouse_down}
         >
             {#each objects as obj (obj.id)}
                 {#if obj.type === 'text'}
                     <TextObject
-                            {obj}
-                            {canvas_rect}
-                            {get_rotate_handle_position}
-                            {show_rotation_angle}
-                            {selected_object}
-                            on:mouse_down={(e) =>
+                        {obj}
+                        {canvas_rect}
+                        {get_rotate_handle_position}
+                        {show_rotation_angle}
+                        {selected_object}
+                        on:mouse_down={(e) =>
                             handle_mouse_down(
                                 e.detail.event,
                                 e.detail.obj,
                                 e.detail.type,
                                 e.detail.edge,
                             )}
-                            on:select_object={(e) => select_object(e.detail)}
-                            on:text_edit_start={() => (is_editing_text = true)}
-                            on:text_edit_end={() => (is_editing_text = false)}
-                            on:update_object={() => (objects = [...objects])}
+                        on:select_object={(e) => select_object(e.detail)}
+                        on:text_edit_start={() => (is_editing_text = true)}
+                        on:text_edit_end={() => (is_editing_text = false)}
+                        on:update_object={() => (objects = [...objects])}
                     />
                 {:else if obj.type === 'image'}
                     <ImageObject
-                            {obj}
-                            {canvas_rect}
-                            {get_rotate_handle_position}
-                            {show_rotation_angle}
-                            {selected_object}
-                            on:mouse_down={(e) =>
+                        {obj}
+                        {canvas_rect}
+                        {get_rotate_handle_position}
+                        {show_rotation_angle}
+                        {selected_object}
+                        on:mouse_down={(e) =>
                             handle_mouse_down(
                                 e.detail.event,
                                 e.detail.obj,
                                 e.detail.type,
                                 e.detail.edge,
                             )}
-                            on:select_object={(e) => select_object(e.detail)}
+                        on:select_object={(e) => select_object(e.detail)}
                     />
                 {/if}
             {/each}
@@ -633,12 +655,14 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        position: relative;
     }
-
-    .canvas {
+    .canvas-bg{
         background: #f5f5f5;
         border: 1px solid #ccc;
-        border-radius: 4px;
+        position: absolute;
+    }
+    .canvas {
         overflow: hidden;
         flex-shrink: 0;
         position: relative;
