@@ -16,22 +16,6 @@
 		width: 600,
 		height: 1800,
 		scale: 0.5,
-		undo: true,
-		redo: true,
-		forward: true,
-		backward: true,
-		duplicate: true,
-		delete: true,
-		bold: true,
-		italic: true,
-		underline: true,
-		strike: true,
-		text_align: true,
-		color: true,
-		background_color: true,
-		object_background_color: true,
-		font_size: true,
-		font_family: true,
 	};
 
 	// 전달받은 옵션과 기본 옵션을 병합
