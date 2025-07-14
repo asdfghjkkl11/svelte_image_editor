@@ -6,9 +6,10 @@
     const dispatch = createEventDispatcher();
 
     // 1. 상수 및 상태 변수 선언
-    export let width = 600; // 외부에서 받는 캔버스 너비
-    export let height = 1800; // 외부에서 받는 캔버스 높이
-    export let scale = 0.5; // 캔버스 스케일(확대/축소 비율)
+    export let option;
+    let width = option.width; // 외부에서 받는 캔버스 너비
+    let height = option.height; // 외부에서 받는 캔버스 높이
+    let scale = option.scale; // 캔버스 스케일(확대/축소 비율)
     let canvas_y = (height * scale) / 2; // 캔버스의 Y 중심 좌표(스케일 적용)
 
     // 오브젝트(사각형 등) 상태 배열
@@ -37,20 +38,6 @@
     let is_history_action = false;
     let is_editing_text = false;
 
-    // 사각형 색상 팔레트
-    const colors = [
-        '#4fc3f7', // 하늘색
-        '#ffb74d', // 주황색
-        '#81c784', // 초록색
-        '#ba68c8', // 보라색
-        '#ff8a65', // 연한 주황색
-        '#64b5f6', // 파란색
-        '#ffd54f', // 노란색
-        '#e57373', // 빨간색
-        '#4db6ac', // 청록색
-        '#7986cb', // 인디고색
-    ];
-
     let canvas_wrapper;
     let canvas_container;
     let canvas;
@@ -59,12 +46,6 @@
 
     // Single prop to trigger actions from parent
     export let action = { type: null, payload: null };
-
-    // 2. 유틸 함수
-    // 랜덤 색상 반환
-    function get_random_color() {
-        return colors[Math.floor(Math.random() * colors.length)];
-    }
 
     // 사각형별 rotate-handle 위치(top/bottom) 반환
     function get_rotate_handle_position(obj) {
@@ -276,20 +257,19 @@
 
     // 텍스트 서식 적용 함수
     function format_text(command, value = null) {
+        document.execCommand("styleWithCSS", true, null);
         document.execCommand(command, false, value);
         objects = objects;
     }
 
     function change_font_size(value) {
+        document.execCommand("styleWithCSS", true, null);
         document.execCommand('fontSize', false, '7');
-        let fontElements =
-            selected_object.text_element.querySelector('font[size="7"]');
-        fontElements.removeAttribute('size');
-        fontElements.style.fontSize = `${value}px`;
-        fontElements.outerHTML
-            .replace('<font', '<span')
-            .replace('</font>', '</span>');
-        let text = fontElements.outerHTML;
+
+        let text = selected_object.text_element.innerHTML;
+        text = text.replaceAll('xxx-large', `${value.value}px`);
+
+        document.execCommand('selectAll', false, null);
         document.execCommand('delete', false, null);
         document.execCommand('insertHTML', false, text);
         objects = objects;

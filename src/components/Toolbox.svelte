@@ -111,13 +111,6 @@
         >
             Align Right
         </button>
-        <button
-            class="tool-btn"
-            on:click|stopPropagation={() =>
-                handle_action('format_text', { command: 'justifyFull' })}
-        >
-            Justify
-        </button>
         <input
             type="color"
             class="tool-btn"
@@ -151,18 +144,50 @@
             on:focus={() => handle_action('text_edit_start')}
             on:blur={() => handle_action('text_edit_end')}
         />
-        <input
-            type="range"
+        <select
             class="tool-btn"
             on:change={(e) =>
-                handle_action('change_font_size', { value: e.target.value })}
+            handle_action('change_font_size', {
+                value: e.target.value,
+            })}
             on:mousedown|stopPropagation
             on:focus={() => handle_action('text_edit_start')}
             on:blur={() => handle_action('text_edit_end')}
-            min="10"
-            max="100"
-            step="1"
-        />
+        >
+            <option value="8">8</option>
+            <option value="9">9</option>
+            <option value="10">10</option>
+            <option value="11">11</option>
+            <option value="12">12</option>
+            <option value="14">14</option>
+            <option value="16">16</option>
+            <option value="18">18</option>
+            <option value="20">20</option>
+            <option value="22">22</option>
+            <option value="24">24</option>
+            <option value="26">26</option>
+            <option value="28">28</option>
+            <option value="36">36</option>
+            <option value="48">48</option>
+            <option value="72">72</option>
+        </select>
+        <select
+            class="tool-btn"
+            on:change={(e) =>
+                handle_action('format_text', {
+                    command: 'fontName',
+                    value: e.target.value,
+                })}
+            on:mousedown|stopPropagation
+            on:focus={() => handle_action('text_edit_start')}
+            on:blur={() => handle_action('text_edit_end')}
+        >
+            <option value="Arial">Arial</option>
+            <option value="Verdana">Verdana</option>
+            <option value="Georgia">Georgia</option>
+            <option value="Times New Roman">Times New Roman</option>
+            <option value="Courier New">Courier New</option>
+        </select>
     </div>
 </div>
 
