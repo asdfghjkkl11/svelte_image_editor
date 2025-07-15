@@ -8,6 +8,7 @@
     export let show_rotation_angle; // 회전 각도 표시 여부
     export let selected_object; // 현재 선택된 객체 정보
     export let show_resize_info; // 리사이즈 정보 표시 여부
+    export let resize_distance_info; // 리사이즈 거리 정보
 
     // 부모 컴포넌트로 이벤트를 전달하기 위한 디스패처 생성
     const dispatch = createEventDispatcher();
@@ -137,6 +138,25 @@
         {#if show_resize_info && obj.id === selected_object?.id}
             <div class="resize-info">
                 {Math.round(obj.width)} x {Math.round(obj.height)}
+            </div>
+        {/if}
+        {#if resize_distance_info && obj.id === selected_object?.id}
+            <div
+                class="resize-distance-info"
+                style="
+                    {resize_distance_info.direction.includes('top')
+                        ? 'bottom: 100%; top: unset;'
+                        : 'top: 100%; bottom: unset;'}
+                    {resize_distance_info.direction.includes('left')
+                        ? 'right: 100%; left: unset;'
+                        : 'left: 100%; right: unset;'}
+                    transform: translate(
+                        {resize_distance_info.direction.includes('left') || resize_distance_info.direction.includes('right') ? (resize_distance_info.direction.includes('left') ? 'calc(-100% - 10px)' : '10px') : '-50%'},
+                        {resize_distance_info.direction.includes('top') || resize_distance_info.direction.includes('bottom') ? (resize_distance_info.direction.includes('top') ? 'calc(-100% - 10px)' : '10px') : '-50%'}
+                    );
+                "
+            >
+                {resize_distance_info.distance}px
             </div>
         {/if}
     </div>
@@ -274,5 +294,17 @@
         font-size: 12px;
         pointer-events: none;
         white-space: nowrap;
+    }
+
+    .resize-distance-info {
+        position: absolute;
+        background: #007bff;
+        color: white;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 12px;
+        pointer-events: none;
+        white-space: nowrap;
+        z-index: 10000;
     }
 </style>

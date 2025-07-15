@@ -50,6 +50,7 @@
     let rotate_handle_position = false; // 회전 핸들 위치 (상/하)
     let snap_lines = []; // 스냅 라인
     let show_resize_info = false; // 리사이즈 정보 표시 여부
+    let resize_distance_info = null; // { distance: number, direction: string }
 
     // 히스토리(undo/redo) 관련 상태 변수
     let history = []; // 객체 상태 변화를 저장하는 배열
@@ -423,7 +424,7 @@
 		let mouse_x = event.clientX - canvas_rect.left;
 		let mouse_y = event.clientY - canvas_rect.top;
 
-		if (event.shiftKey) {
+		if (event.ctrlKey) {
 			const canvas_width = width * scale;
 			const canvas_height = height * scale;
 			mouse_x = Math.max(0, Math.min(mouse_x, canvas_width));
@@ -458,20 +459,45 @@
 		const unrotated_dy = -vec_x * sin + vec_y * cos;
 
 		let new_width, new_height;
-
-		if (dir_x === 0) {
-			new_width = start_width;
-			new_height = Math.max(min_size, Math.abs(unrotated_dy));
-		} else if (dir_y === 0) {
-			new_width = Math.max(min_size, Math.abs(unrotated_dx));
-			new_height = start_height;
-		} else {
-			new_width = Math.max(min_size, Math.abs(unrotated_dx));
-			new_height = Math.max(min_size, Math.abs(unrotated_dy));
-		}
-
 		let final_unrotated_dx = unrotated_dx;
 		let final_unrotated_dy = unrotated_dy;
+
+		if (event.shiftKey) {
+			const ratio = start_width / start_height;
+
+			if (dir_x !== 0 && dir_y !== 0) { // Corner resize
+				let temp_width = Math.max(min_size, Math.abs(unrotated_dx));
+				let temp_height = Math.max(min_size, Math.abs(unrotated_dy));
+
+				if (temp_width / ratio > temp_height) {
+					new_width = temp_width;
+					new_height = new_width / ratio;
+				} else {
+					new_height = temp_height;
+					new_width = new_height * ratio;
+				}
+				final_unrotated_dx = Math.sign(unrotated_dx) * new_width;
+				final_unrotated_dy = Math.sign(unrotated_dy) * new_height;
+
+			} else if (dir_x !== 0) { // Horizontal resize
+				new_width = Math.max(min_size, Math.abs(unrotated_dx));
+				new_height = new_width / ratio;
+			} else { // Vertical resize
+				new_height = Math.max(min_size, Math.abs(unrotated_dy));
+				new_width = new_height * ratio;
+			}
+		} else {
+			if (dir_x === 0) {
+				new_width = start_width;
+				new_height = Math.max(min_size, Math.abs(unrotated_dy));
+			} else if (dir_y === 0) {
+				new_width = Math.max(min_size, Math.abs(unrotated_dx));
+				new_height = start_height;
+			} else {
+				new_width = Math.max(min_size, Math.abs(unrotated_dx));
+				new_height = Math.max(min_size, Math.abs(unrotated_dy));
+			}
+		}
 
 		if (dir_x === 0) {
 			// 상하 리사이즈 시에는 수평 이동 벡터를 0으로 설정
@@ -709,6 +735,51 @@
 			selected_object.height = result.height;
 			selected_object.x = result.x;
 			selected_object.y = result.y;
+
+			// Calculate and update resize_distance_info
+			const current_bounds = {
+				left: selected_object.x,
+				top: selected_object.y,
+				right: selected_object.x + selected_object.width,
+				bottom: selected_object.y + selected_object.height,
+			};
+
+			let min_distance = Infinity;
+			let distance_direction = '';
+
+			const canvas_width = width * scale;
+			const canvas_height = height * scale;
+
+			const check_distance = (current_pos, target_pos, direction) => {
+				const dist = Math.abs(current_pos - target_pos);
+				if (dist < min_distance) {
+					min_distance = dist;
+					distance_direction = direction;
+				}
+			};
+
+			// Check against canvas edges
+			if (resize_edge.includes('left')) {
+				check_distance(current_bounds.left, 0, 'left');
+			} else if (resize_edge.includes('right')) {
+				check_distance(current_bounds.right, canvas_width, 'right');
+			}
+
+			if (resize_edge.includes('top')) {
+				check_distance(current_bounds.top, 0, 'top');
+			} else if (resize_edge.includes('bottom')) {
+				check_distance(current_bounds.bottom, canvas_height, 'bottom');
+			}
+
+			if (min_distance !== Infinity && min_distance > 0) {
+				resize_distance_info = {
+					distance: Math.round(min_distance),
+					direction: distance_direction,
+				};
+			} else {
+				resize_distance_info = null;
+			}
+
 			objects = objects.map((obj) =>
 				obj.id === selected_object.id ? selected_object : obj,
 			);
@@ -726,6 +797,7 @@
         is_rotating = false;
         show_rotation_angle = false;
         show_resize_info = false; // 리사이즈 종료 시 정보 숨김
+        resize_distance_info = null; // 리사이즈 종료 시 거리 정보 숨김
         resize_edge = null;
         snap_lines = [];
     }
@@ -863,6 +935,7 @@
                             {show_rotation_angle}
                             {selected_object}
                             {show_resize_info}
+                            {resize_distance_info}
                             on:mouse_down={(e) =>
                                 handle_mouse_down(
                                     e.detail.event,
@@ -883,6 +956,7 @@
                             {show_rotation_angle}
                             {selected_object}
                             {show_resize_info}
+                            {resize_distance_info}
                             on:mouse_down={(e) =>
                                 handle_mouse_down(
                                     e.detail.event,
@@ -965,16 +1039,4 @@
         width: 100%;
         left: 0;
     }
-    .resize-info {
-        position: absolute;
-        background: rgba(0, 0, 0, 0.7);
-        color: white;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 12px;
-        transform: translateX(-50%);
-        pointer-events: none;
-        white-space: nowrap;
-    }
-
 </style>
