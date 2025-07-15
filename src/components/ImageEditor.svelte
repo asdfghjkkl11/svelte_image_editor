@@ -492,20 +492,25 @@
      * @param {object} obj - 회전 대상 객체.
      */
     function handle_rotate(event, obj) {
-        const center_x = obj.x + obj.width / 2;
-        const center_y = obj.y + obj.height / 2;
-        const mouse_x = event.clientX - canvas_rect.left;
-        const mouse_y = event.clientY - canvas_rect.top;
-        const dx = mouse_x - center_x;
-        const dy = mouse_y - center_y;
-        let angle = (Math.atan2(dy, dx) * 180) / Math.PI + 90;
+		const center_x = obj.x + obj.width / 2;
+		const center_y = obj.y + obj.height / 2;
+		const mouse_x = event.clientX - canvas_rect.left;
+		const mouse_y = event.clientY - canvas_rect.top;
+		const dx = mouse_x - center_x;
+		const dy = mouse_y - center_y;
+		let angle = (Math.atan2(dy, dx) * 180) / Math.PI + 90;
 
-        if (!rotate_handle_position) {
-            angle += 180;
-        }
-        obj.angle = angle;
-        objects = objects.map((o) => (o.id === obj.id ? o : o));
-    }
+		if (!rotate_handle_position) {
+			angle += 180;
+		}
+
+		if (event.shiftKey) {
+			angle = Math.round(angle / 5) * 5;
+		}
+
+		obj.angle = angle;
+		objects = objects.map((o) => (o.id === obj.id ? o : o));
+	}
 
     /**
      * 마우스 다운 이벤트 핸들러 (드래그, 리사이즈, 회전 시작).
