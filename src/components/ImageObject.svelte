@@ -1,33 +1,33 @@
 <script>
-	import { createEventDispatcher } from 'svelte';
+    import { createEventDispatcher } from 'svelte';
 
-	// 부모 컴포넌트(ImageEditor)로부터 전달받는 속성들
-	export let obj; // 이미지 객체의 데이터 (위치, 크기, 각도, 소스 등)
-	export let canvas_rect; // 캔버스의 위치 및 크기 정보
-	export let get_rotate_handle_position; // 회전 핸들 위치 계산 함수
-	export let show_rotation_angle; // 회전 각도 표시 여부
-	export let selected_object; // 현재 선택된 객체 정보
+    // 부모 컴포넌트(ImageEditor)로부터 전달받는 속성들
+    export let obj; // 이미지 객체의 데이터 (위치, 크기, 각도, 소스 등)
+    export let canvas_rect; // 캔버스의 위치 및 크기 정보
+    export let get_rotate_handle_position; // 회전 핸들 위치 계산 함수
+    export let show_rotation_angle; // 회전 각도 표시 여부
+    export let selected_object; // 현재 선택된 객체 정보
 
-	// 부모 컴포넌트로 이벤트를 전달하기 위한 디스패처 생성
-	const dispatch = createEventDispatcher();
+    // 부모 컴포넌트로 이벤트를 전달하기 위한 디스패처 생성
+    const dispatch = createEventDispatcher();
 
-	/**
-	 * 마우스 다운 이벤트를 부모 컴포넌트로 전달합니다.
-	 * 드래그, 리사이즈, 회전 시작을 알립니다.
-	 * @param {MouseEvent} event - 마우스 이벤트 객체
-	 * @param {string} type - 조작 유형 ('drag', 'resize', 'rotate')
-	 * @param {string|null} [edge=null] - 리사이즈 시 조작되는 모서리/변
-	 */
-	function handle_mouse_down(event, type, edge = null) {
-		dispatch('mouse_down', { event, obj, type, edge });
-	}
+    /**
+     * 마우스 다운 이벤트를 부모 컴포넌트로 전달합니다.
+     * 드래그, 리사이즈, 회전 시작을 알립니다.
+     * @param {MouseEvent} event - 마우스 이벤트 객체
+     * @param {string} type - 조작 유형 ('drag', 'resize', 'rotate')
+     * @param {string|null} [edge=null] - 리사이즈 시 조작되는 모서리/변
+     */
+    function handle_mouse_down(event, type, edge = null) {
+        dispatch('mouse_down', { event, obj, type, edge });
+    }
 
-	/**
-	 * 객체 선택 이벤트를 부모 컴포넌트로 전달합니다.
-	 */
-	function select_object() {
-		dispatch('select_object', obj);
-	}
+    /**
+     * 객체 선택 이벤트를 부모 컴포넌트로 전달합니다.
+     */
+    function select_object() {
+        dispatch('select_object', obj);
+    }
 </script>
 
 <!--본체-->

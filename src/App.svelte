@@ -1,79 +1,80 @@
 <script>
-	import './global.css';
-	import ImageEditor from './components/ImageEditor.svelte';
+    import './global.css';
+    import '@retina-dev/hebees_component/css/fonts.css';
+    import ImageEditor from './components/ImageEditor.svelte';
 
-	// ImageEditor 컴포넌트에 바인딩될 인스턴스
-	let image_editor;
+    // ImageEditor 컴포넌트에 바인딩될 인스턴스
+    let image_editor;
 
-	// 업로드된 이미지 파일의 데이터 URL을 저장하는 배열
-	let uploaded_images = [];
-	// 현재 히스토리 인덱스 (undo/redo UI 활성화/비활성화에 사용)
-	let current_history_index;
-	// 전체 히스토리 길이 (undo/redo UI 활성화/비활성화에 사용)
-	let history_length;
+    // 업로드된 이미지 파일의 데이터 URL을 저장하는 배열
+    let uploaded_images = [];
+    // 현재 히스토리 인덱스 (undo/redo UI 활성화/비활성화에 사용)
+    let current_history_index;
+    // 전체 히스토리 길이 (undo/redo UI 활성화/비활성화에 사용)
+    let history_length;
 
-	// ImageEditor 컴포넌트에 전달할 옵션 객체
-	const option = {
-		width: 800,
-		height: 600,
-		scale: 1,
-	};
+    // ImageEditor 컴포넌트에 전달할 옵션 객체
+    const option = {
+        width: 400,
+        height: 540,
+        scale: 1,
+    };
 
-	/**
-	 * 파일 입력(input) 변경 시 호출되는 이벤트 핸들러.
-	 * 선택된 이미지 파일을 읽어 데이터 URL로 변환하고 `uploaded_images` 배열에 추가합니다.
-	 * @param {Event} event - 파일 입력 변경 이벤트
-	 */
-	function handle_image_upload(event) {
-		const file = event.target.files[0];
-		if (file) {
-			const reader = new FileReader();
-			reader.onload = (e) => {
-				uploaded_images = [...uploaded_images, e.target.result];
-			};
-			reader.readAsDataURL(file);
-		}
-	}
+    /**
+     * 파일 입력(input) 변경 시 호출되는 이벤트 핸들러.
+     * 선택된 이미지 파일을 읽어 데이터 URL로 변환하고 `uploaded_images` 배열에 추가합니다.
+     * @param {Event} event - 파일 입력 변경 이벤트
+     */
+    function handle_image_upload(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                uploaded_images = [...uploaded_images, e.target.result];
+            };
+            reader.readAsDataURL(file);
+        }
+    }
 
-	/**
-	 * '텍스트 추가' 버튼 클릭 시 ImageEditor 컴포넌트의 텍스트 객체 추가 함수를 호출합니다.
-	 */
-	function add_text_object() {
-		image_editor.add_text_object();
-	}
+    /**
+     * '텍스트 추가' 버튼 클릭 시 ImageEditor 컴포넌트의 텍스트 객체 추가 함수를 호출합니다.
+     */
+    function add_text_object() {
+        image_editor.add_text_object();
+    }
 
-	/**
-	 * 업로드된 이미지를 클릭 시 ImageEditor 컴포넌트의 이미지 객체 추가 함수를 호출합니다.
-	 * @param {string} src - 추가할 이미지의 데이터 URL
-	 */
-	function add_image_to_editor(src) {
-		image_editor.add_image_object(src);
-	}
+    /**
+     * 업로드된 이미지를 클릭 시 ImageEditor 컴포넌트의 이미지 객체 추가 함수를 호출합니다.
+     * @param {string} src - 추가할 이미지의 데이터 URL
+     */
+    function add_image_to_editor(src) {
+        image_editor.add_image_object(src);
+    }
 
-	/**
-	 * ImageEditor의 다양한 액션을 호출하는 범용 함수.
-	 * @param {string} type - 실행할 액션의 종류 (예: 'undo', 'redo', 'delete_object')
-	 * @param {any} [payload=null] - 액션에 필요한 데이터
-	 * @returns {Promise<any>} 액션 실행 결과
-	 */
-	async function handle_action(type, payload = null) {
-		return await image_editor.action(type, payload);
-	}
+    /**
+     * ImageEditor의 다양한 액션을 호출하는 범용 함수.
+     * @param {string} type - 실행할 액션의 종류 (예: 'undo', 'redo', 'delete_object')
+     * @param {any} [payload=null] - 액션에 필요한 데이터
+     * @returns {Promise<any>} 액션 실행 결과
+     */
+    async function handle_action(type, payload = null) {
+        return await image_editor.action(type, payload);
+    }
 
-	/**
-	 * '저장' 버튼 클릭 시 캔버스 내용을 PNG 이미지로 저장합니다.
-	 */
-	async function save_image() {
-		// ImageEditor의 'save' 액션을 호출하여 이미지 데이터 URL을 받음
-		let data_url = await handle_action('save', 'png');
-		// a 태그를 동적으로 생성하여 다운로드 링크로 사용
-		let a = document.createElement('a');
-		a.download = 'IMAGE.png';
-		a.href = data_url;
-		document.body.appendChild(a);
-		a.click(); // 클릭 이벤트를 발생시켜 다운로드 실행
-		document.body.removeChild(a); // 사용된 a 태그 제거
-	}
+    /**
+     * '저장' 버튼 클릭 시 캔버스 내용을 PNG 이미지로 저장합니다.
+     */
+    async function save_image() {
+        // ImageEditor의 'save' 액션을 호출하여 이미지 데이터 URL을 받음
+        let data_url = await handle_action('save', 'png');
+        // a 태그를 동적으로 생성하여 다운로드 링크로 사용
+        let a = document.createElement('a');
+        a.download = 'IMAGE.png';
+        a.href = data_url;
+        document.body.appendChild(a);
+        a.click(); // 클릭 이벤트를 발생시켜 다운로드 실행
+        document.body.removeChild(a); // 사용된 a 태그 제거
+    }
 </script>
 
 <div class="editor-container">
@@ -223,8 +224,6 @@
                             value: e.target.value,
                         })}
                     on:mousedown|stopPropagation
-                    on:focus={() => handle_action('text_edit_start')}
-                    on:blur={() => handle_action('text_edit_end')}
                 />
             </label>
             <label class="tool-label">
@@ -238,8 +237,6 @@
                             value: e.target.value,
                         })}
                     on:mousedown|stopPropagation
-                    on:focus={() => handle_action('text_edit_start')}
-                    on:blur={() => handle_action('text_edit_end')}
                 />
             </label>
             <label class="tool-label">
@@ -253,8 +250,6 @@
                             e.target.value,
                         )}
                     on:mousedown|stopPropagation
-                    on:focus={() => handle_action('text_edit_start')}
-                    on:blur={() => handle_action('text_edit_end')}
                 />
             </label>
             <label class="tool-label">
@@ -266,8 +261,6 @@
                             value: e.target.value,
                         })}
                     on:mousedown|stopPropagation
-                    on:focus={() => handle_action('text_edit_start')}
-                    on:blur={() => handle_action('text_edit_end')}
                 >
                     <option value="8">8</option>
                     <option value="9">9</option>
@@ -297,14 +290,14 @@
                             value: e.target.value,
                         })}
                     on:mousedown|stopPropagation
-                    on:focus={() => handle_action('text_edit_start')}
-                    on:blur={() => handle_action('text_edit_end')}
                 >
                     <option value="Arial">Arial</option>
                     <option value="Verdana">Verdana</option>
                     <option value="Georgia">Georgia</option>
                     <option value="Times New Roman">Times New Roman</option>
                     <option value="Courier New">Courier New</option>
+                    <option value="Pretendard">Pretendard</option>
+                    <option value="Gmarket Sans">Gmarket Sans</option>
                 </select>
             </label>
         </div>
