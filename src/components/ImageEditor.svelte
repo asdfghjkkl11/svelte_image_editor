@@ -557,29 +557,51 @@
      * @param {MouseEvent} event - 마우스 이벤트.
      */
     function handle_mouse_move(event) {
-        if (!selected_object.id) return;
+		if (!selected_object.id) return;
 
-        if (is_dragging) {
-            const new_x = event.clientX - start_x;
-            const new_y = event.clientY - start_y;
-            selected_object.x = new_x;
-            selected_object.y = new_y;
-            objects = objects.map((obj) =>
-                obj.id === selected_object.id ? selected_object : obj,
-            );
-        } else if (is_resizing) {
-            const result = handle_resize(event, selected_object, resize_edge);
-            selected_object.width = result.width;
-            selected_object.height = result.height;
-            selected_object.x = result.x;
-            selected_object.y = result.y;
-            objects = objects.map((obj) =>
-                obj.id === selected_object.id ? selected_object : obj,
-            );
-        } else if (is_rotating) {
-            handle_rotate(event, selected_object);
-        }
-    }
+		if (is_dragging) {
+			let new_x = event.clientX - start_x;
+			let new_y = event.clientY - start_y;
+
+			if (event.shiftKey) {
+				const canvas_center_x = (width * scale) / 2;
+				const canvas_center_y = (height * scale) / 2;
+				const object_center_x = new_x + selected_object.width / 2;
+				const object_center_y = new_y + selected_object.height / 2;
+				const snap_threshold = 10;
+
+				if (
+					Math.abs(object_center_x - canvas_center_x) <
+					snap_threshold
+				) {
+					new_x = canvas_center_x - selected_object.width / 2;
+				}
+				if (
+					Math.abs(object_center_y - canvas_center_y) <
+					snap_threshold
+				) {
+					new_y = canvas_center_y - selected_object.height / 2;
+				}
+			}
+
+			selected_object.x = new_x;
+			selected_object.y = new_y;
+			objects = objects.map((obj) =>
+				obj.id === selected_object.id ? selected_object : obj,
+			);
+		} else if (is_resizing) {
+			const result = handle_resize(event, selected_object, resize_edge);
+			selected_object.width = result.width;
+			selected_object.height = result.height;
+			selected_object.x = result.x;
+			selected_object.y = result.y;
+			objects = objects.map((obj) =>
+				obj.id === selected_object.id ? selected_object : obj,
+			);
+		} else if (is_rotating) {
+			handle_rotate(event, selected_object);
+		}
+	}
 
     /**
      * 마우스 업 이벤트 핸들러 (드래그, 리사이즈, 회전 종료).
