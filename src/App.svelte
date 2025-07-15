@@ -88,7 +88,8 @@
         a.click();
         // 다운로드 후에는 더 이상 필요 없는 <a> 태그를 body에서 제거하여 DOM을 깨끗하게 유지합니다.
         document.body.removeChild(a);
-    }""
+    }
+    ('');
 </script>
 
 <div class="editor-container">

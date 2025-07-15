@@ -415,7 +415,10 @@
         // 현재 객체 배열을 JSON 문자열로 변환하여 상태를 기록합니다.
         const current_state = JSON.stringify(objects);
         // 히스토리의 마지막 상태와 현재 상태가 동일하면 중복 저장을 방지하고 함수를 종료합니다.
-        if (history.length > 0 && history[current_history_index] === current_state) {
+        if (
+            history.length > 0 &&
+            history[current_history_index] === current_state
+        ) {
             return;
         }
         // 만약 사용자가 Undo를 한 상태에서 새로운 변경을 가했다면, 기존의 Redo 히스토리를 제거합니다.
@@ -511,113 +514,115 @@
      * @returns {{width: number, height: number, x: number, y: number}} 계산된 객체의 새 너비, 높이, x, y 좌표.
      */
     function handle_resize(event, object, edge) {
-		const rad = (object.angle * Math.PI) / 180;
-		const cos = Math.cos(rad);
-		const sin = Math.sin(rad);
+        const rad = (object.angle * Math.PI) / 180;
+        const cos = Math.cos(rad);
+        const sin = Math.sin(rad);
 
-		let mouse_x = event.clientX - canvas_rect.left;
-		let mouse_y = event.clientY - canvas_rect.top;
+        let mouse_x = event.clientX - canvas_rect.left;
+        let mouse_y = event.clientY - canvas_rect.top;
 
-		if (event.ctrlKey) {
-			const canvas_width = width * scale;
-			const canvas_height = height * scale;
-			mouse_x = Math.max(0, Math.min(mouse_x, canvas_width));
-			mouse_y = Math.max(0, Math.min(mouse_y, canvas_height));
-		}
+        if (event.ctrlKey) {
+            const canvas_width = width * scale;
+            const canvas_height = height * scale;
+            mouse_x = Math.max(0, Math.min(mouse_x, canvas_width));
+            mouse_y = Math.max(0, Math.min(mouse_y, canvas_height));
+        }
 
-		const center_x = start_obj_x + start_width / 2;
-		const center_y = start_obj_y + start_height / 2;
+        const center_x = start_obj_x + start_width / 2;
+        const center_y = start_obj_y + start_height / 2;
 
-		const dir_x = edge.includes('left')
-			? -1
-			: edge.includes('right')
-			  ? 1
-			  : 0;
-		const dir_y = edge.includes('top')
-			? -1
-			: edge.includes('bottom')
-			  ? 1
-			  : 0;
+        const dir_x = edge.includes('left')
+            ? -1
+            : edge.includes('right')
+              ? 1
+              : 0;
+        const dir_y = edge.includes('top')
+            ? -1
+            : edge.includes('bottom')
+              ? 1
+              : 0;
 
-		const pivot_local_x = (-dir_x * start_width) / 2;
-		const pivot_local_y = (-dir_y * start_height) / 2;
-		const pivot_offset_x = pivot_local_x * cos - pivot_local_y * sin;
-		const pivot_offset_y = pivot_local_x * sin + pivot_local_y * cos;
-		const pivot_x = center_x + pivot_offset_x;
-		const pivot_y = center_y + pivot_offset_y;
+        const pivot_local_x = (-dir_x * start_width) / 2;
+        const pivot_local_y = (-dir_y * start_height) / 2;
+        const pivot_offset_x = pivot_local_x * cos - pivot_local_y * sin;
+        const pivot_offset_y = pivot_local_x * sin + pivot_local_y * cos;
+        const pivot_x = center_x + pivot_offset_x;
+        const pivot_y = center_y + pivot_offset_y;
 
-		const vec_x = mouse_x - pivot_x;
-		const vec_y = mouse_y - pivot_y;
+        const vec_x = mouse_x - pivot_x;
+        const vec_y = mouse_y - pivot_y;
 
-		const unrotated_dx = vec_x * cos + vec_y * sin;
-		const unrotated_dy = -vec_x * sin + vec_y * cos;
+        const unrotated_dx = vec_x * cos + vec_y * sin;
+        const unrotated_dy = -vec_x * sin + vec_y * cos;
 
-		let new_width, new_height;
-		let final_unrotated_dx = unrotated_dx;
-		let final_unrotated_dy = unrotated_dy;
+        let new_width, new_height;
+        let final_unrotated_dx = unrotated_dx;
+        let final_unrotated_dy = unrotated_dy;
 
-		if (event.shiftKey) {
-			const ratio = start_width / start_height;
+        if (event.shiftKey) {
+            const ratio = start_width / start_height;
 
-			if (dir_x !== 0 && dir_y !== 0) { // Corner resize
-				let temp_width = Math.max(min_size, Math.abs(unrotated_dx));
-				let temp_height = Math.max(min_size, Math.abs(unrotated_dy));
+            if (dir_x !== 0 && dir_y !== 0) {
+                // Corner resize
+                let temp_width = Math.max(min_size, Math.abs(unrotated_dx));
+                let temp_height = Math.max(min_size, Math.abs(unrotated_dy));
 
-				if (temp_width / ratio > temp_height) {
-					new_width = temp_width;
-					new_height = new_width / ratio;
-				} else {
-					new_height = temp_height;
-					new_width = new_height * ratio;
-				}
-				final_unrotated_dx = Math.sign(unrotated_dx) * new_width;
-				final_unrotated_dy = Math.sign(unrotated_dy) * new_height;
+                if (temp_width / ratio > temp_height) {
+                    new_width = temp_width;
+                    new_height = new_width / ratio;
+                } else {
+                    new_height = temp_height;
+                    new_width = new_height * ratio;
+                }
+                final_unrotated_dx = Math.sign(unrotated_dx) * new_width;
+                final_unrotated_dy = Math.sign(unrotated_dy) * new_height;
+            } else if (dir_x !== 0) {
+                // Horizontal resize
+                new_width = Math.max(min_size, Math.abs(unrotated_dx));
+                new_height = new_width / ratio;
+            } else {
+                // Vertical resize
+                new_height = Math.max(min_size, Math.abs(unrotated_dy));
+                new_width = new_height * ratio;
+            }
+        } else {
+            if (dir_x === 0) {
+                new_width = start_width;
+                new_height = Math.max(min_size, Math.abs(unrotated_dy));
+            } else if (dir_y === 0) {
+                new_width = Math.max(min_size, Math.abs(unrotated_dx));
+                new_height = start_height;
+            } else {
+                new_width = Math.max(min_size, Math.abs(unrotated_dx));
+                new_height = Math.max(min_size, Math.abs(unrotated_dy));
+            }
+        }
 
-			} else if (dir_x !== 0) { // Horizontal resize
-				new_width = Math.max(min_size, Math.abs(unrotated_dx));
-				new_height = new_width / ratio;
-			} else { // Vertical resize
-				new_height = Math.max(min_size, Math.abs(unrotated_dy));
-				new_width = new_height * ratio;
-			}
-		} else {
-			if (dir_x === 0) {
-				new_width = start_width;
-				new_height = Math.max(min_size, Math.abs(unrotated_dy));
-			} else if (dir_y === 0) {
-				new_width = Math.max(min_size, Math.abs(unrotated_dx));
-				new_height = start_height;
-			} else {
-				new_width = Math.max(min_size, Math.abs(unrotated_dx));
-				new_height = Math.max(min_size, Math.abs(unrotated_dy));
-			}
-		}
+        if (dir_x === 0) {
+            // 상하 리사이즈 시에는 수평 이동 벡터를 0으로 설정
+            final_unrotated_dx = 0;
+        }
+        if (dir_y === 0) {
+            // 좌우 리사이즈 시에는 수직 이동 벡터를 0으로 설정
+            final_unrotated_dy = 0;
+        }
 
-		if (dir_x === 0) {
-			// 상하 리사이즈 시에는 수평 이동 벡터를 0으로 설정
-			final_unrotated_dx = 0;
-		}
-		if (dir_y === 0) {
-			// 좌우 리사이즈 시에는 수직 이동 벡터를 0으로 설정
-			final_unrotated_dy = 0;
-		}
+        const center_offset_local_x = final_unrotated_dx / 2;
+        const center_offset_local_y = final_unrotated_dy / 2;
+        const center_offset_x =
+            center_offset_local_x * cos - center_offset_local_y * sin;
+        const center_offset_y =
+            center_offset_local_x * sin + center_offset_local_y * cos;
+        const new_center_x = pivot_x + center_offset_x;
+        const new_center_y = pivot_y + center_offset_y;
 
-		const center_offset_local_x = final_unrotated_dx / 2;
-		const center_offset_local_y = final_unrotated_dy / 2;
-		const center_offset_x =
-			center_offset_local_x * cos - center_offset_local_y * sin;
-		const center_offset_y =
-			center_offset_local_x * sin + center_offset_local_y * cos;
-		const new_center_x = pivot_x + center_offset_x;
-		const new_center_y = pivot_y + center_offset_y;
-
-		return {
-			width: new_width,
-			height: new_height,
-			x: new_center_x - new_width / 2,
-			y: new_center_y - new_height / 2,
-		};
-	}
+        return {
+            width: new_width,
+            height: new_height,
+            x: new_center_x - new_width / 2,
+            y: new_center_y - new_height / 2,
+        };
+    }
 
     /**
      * @description 객체를 회전시키는 로직을 처리합니다.
@@ -627,25 +632,25 @@
      * @param {object} obj - 회전 대상 객체.
      */
     function handle_rotate(event, obj) {
-		const center_x = obj.x + obj.width / 2;
-		const center_y = obj.y + obj.height / 2;
-		const mouse_x = event.clientX - canvas_rect.left;
-		const mouse_y = event.clientY - canvas_rect.top;
-		const dx = mouse_x - center_x;
-		const dy = mouse_y - center_y;
-		let angle = (Math.atan2(dy, dx) * 180) / Math.PI + 90;
+        const center_x = obj.x + obj.width / 2;
+        const center_y = obj.y + obj.height / 2;
+        const mouse_x = event.clientX - canvas_rect.left;
+        const mouse_y = event.clientY - canvas_rect.top;
+        const dx = mouse_x - center_x;
+        const dy = mouse_y - center_y;
+        let angle = (Math.atan2(dy, dx) * 180) / Math.PI + 90;
 
-		if (!rotate_handle_position) {
-			angle += 180;
-		}
+        if (!rotate_handle_position) {
+            angle += 180;
+        }
 
-		if (event.shiftKey) {
-			angle = Math.round(angle / 5) * 5;
-		}
+        if (event.shiftKey) {
+            angle = Math.round(angle / 5) * 5;
+        }
 
-		obj.angle = angle;
-		objects = objects.map((o) => (o.id === obj.id ? o : o));
-	}
+        obj.angle = angle;
+        objects = objects.map((o) => (o.id === obj.id ? o : o));
+    }
 
     /**
      * @description 마우스 버튼을 눌렀을 때의 초기 동작을 설정합니다.
@@ -690,267 +695,318 @@
      * @param {MouseEvent} event - 마우스 이벤트 객체.
      */
     function handle_mouse_move(event) {
-		if (!selected_object.id) return;
+        if (!selected_object.id) return;
 
-		if (is_dragging) {
-			let new_x = event.clientX - start_x;
-			let new_y = event.clientY - start_y;
+        if (is_dragging) {
+            let new_x = event.clientX - start_x;
+            let new_y = event.clientY - start_y;
 
-			if (event.shiftKey) {
-				new_x = Math.round(new_x / 2) * 2;
-				new_y = Math.round(new_y / 2) * 2;
-			}
+            if (event.shiftKey) {
+                new_x = Math.round(new_x / 2) * 2;
+                new_y = Math.round(new_y / 2) * 2;
+            }
 
-			const snap_threshold = 5;
-			const new_snap_lines = [];
-			const dragged_obj = selected_object;
+            const snap_threshold = 5;
+            const new_snap_lines = [];
+            const dragged_obj = selected_object;
 
-			// --- Start of new snap logic ---
+            // --- Start of new snap logic ---
 
-			// Un-rotated bounds for snapping
-			const dragged_bounds = {
-				left: new_x,
-				top: new_y,
-				right: new_x + dragged_obj.width,
-				bottom: new_y + dragged_obj.height,
-				h_center: new_x + dragged_obj.width / 2,
-				v_center: new_y + dragged_obj.height / 2,
-			};
+            // Un-rotated bounds for snapping
+            const dragged_bounds = {
+                left: new_x,
+                top: new_y,
+                right: new_x + dragged_obj.width,
+                bottom: new_y + dragged_obj.height,
+                h_center: new_x + dragged_obj.width / 2,
+                v_center: new_y + dragged_obj.height / 2,
+            };
 
-			const snap_targets_h = [];
-			const snap_targets_v = [];
+            const snap_targets_h = [];
+            const snap_targets_v = [];
 
-			// Canvas snap targets
-			const canvas_h_center = (width * scale) / 2;
-			const canvas_v_center = (height * scale) / 2;
-			const canvas_right = width * scale;
-			const canvas_bottom = height * scale;
-			snap_targets_h.push(0, canvas_h_center, canvas_right);
-			snap_targets_v.push(0, canvas_v_center, canvas_bottom);
+            // Canvas snap targets
+            const canvas_h_center = (width * scale) / 2;
+            const canvas_v_center = (height * scale) / 2;
+            const canvas_right = width * scale;
+            const canvas_bottom = height * scale;
+            snap_targets_h.push(0, canvas_h_center, canvas_right);
+            snap_targets_v.push(0, canvas_v_center, canvas_bottom);
 
-			const other_objects = objects.filter(o => o.id !== dragged_obj.id);
+            const other_objects = objects.filter(
+                (o) => o.id !== dragged_obj.id,
+            );
 
-			other_objects.forEach(o => {
-				const obj_h_center = o.x + o.width / 2;
-				const obj_v_center = o.y + o.height / 2;
+            other_objects.forEach((o) => {
+                const obj_h_center = o.x + o.width / 2;
+                const obj_v_center = o.y + o.height / 2;
 
-				// Add object's own snap points
-				snap_targets_h.push(o.x, obj_h_center, o.x + o.width);
-				snap_targets_v.push(o.y, obj_v_center, o.y + o.height);
+                // Add object's own snap points
+                snap_targets_h.push(o.x, obj_h_center, o.x + o.width);
+                snap_targets_v.push(o.y, obj_v_center, o.y + o.height);
 
-				// Add midpoints between object and canvas edges
-				snap_targets_h.push(obj_h_center / 2); // Midpoint with left edge (0)
-				snap_targets_h.push((obj_h_center + canvas_right) / 2); // Midpoint with right edge
-				snap_targets_v.push(obj_v_center / 2); // Midpoint with top edge (0)
-				snap_targets_v.push((obj_v_center + canvas_bottom) / 2); // Midpoint with bottom edge
-			});
+                // Add midpoints between object and canvas edges
+                snap_targets_h.push(obj_h_center / 2); // Midpoint with left edge (0)
+                snap_targets_h.push((obj_h_center + canvas_right) / 2); // Midpoint with right edge
+                snap_targets_v.push(obj_v_center / 2); // Midpoint with top edge (0)
+                snap_targets_v.push((obj_v_center + canvas_bottom) / 2); // Midpoint with bottom edge
+            });
 
-			// Add midpoints between pairs of other objects
-			for (let i = 0; i < other_objects.length; i++) {
-				for (let j = i + 1; j < other_objects.length; j++) {
-					const obj1 = other_objects[i];
-					const obj2 = other_objects[j];
+            // Add midpoints between pairs of other objects
+            for (let i = 0; i < other_objects.length; i++) {
+                for (let j = i + 1; j < other_objects.length; j++) {
+                    const obj1 = other_objects[i];
+                    const obj2 = other_objects[j];
 
-					const mid_center_x = (obj1.x + obj1.width / 2 + obj2.x + obj2.width / 2) / 2;
-					snap_targets_h.push(mid_center_x);
+                    const mid_center_x =
+                        (obj1.x + obj1.width / 2 + obj2.x + obj2.width / 2) / 2;
+                    snap_targets_h.push(mid_center_x);
 
-					const mid_center_y = (obj1.y + obj1.height / 2 + obj2.y + obj2.height / 2) / 2;
-					snap_targets_v.push(mid_center_y);
-				}
-			}
+                    const mid_center_y =
+                        (obj1.y + obj1.height / 2 + obj2.y + obj2.height / 2) /
+                        2;
+                    snap_targets_v.push(mid_center_y);
+                }
+            }
 
-			let best_snap_x = null;
-			let min_dist_x = snap_threshold;
+            let best_snap_x = null;
+            let min_dist_x = snap_threshold;
 
-			const dragged_points_x = {
-				left: dragged_bounds.left,
-				h_center: dragged_bounds.h_center,
-				right: dragged_bounds.right,
-			};
+            const dragged_points_x = {
+                left: dragged_bounds.left,
+                h_center: dragged_bounds.h_center,
+                right: dragged_bounds.right,
+            };
 
-			for (const target_x of snap_targets_h) {
-				for (const [point_name, point_pos] of Object.entries(
-					dragged_points_x,
-				)) {
-					const dist = Math.abs(point_pos - target_x);
-					if (dist < min_dist_x) {
-						min_dist_x = dist;
-						best_snap_x = { point_name, target: target_x };
-					}
-				}
-			}
+            for (const target_x of snap_targets_h) {
+                for (const [point_name, point_pos] of Object.entries(
+                    dragged_points_x,
+                )) {
+                    const dist = Math.abs(point_pos - target_x);
+                    if (dist < min_dist_x) {
+                        min_dist_x = dist;
+                        best_snap_x = { point_name, target: target_x };
+                    }
+                }
+            }
 
-			if (best_snap_x) {
-				const { point_name, target } = best_snap_x;
-				if (point_name === 'left') {
-					new_x = target;
-				} else if (point_name === 'h_center') {
-					new_x = target - dragged_obj.width / 2;
-				} else if (point_name === 'right') {
-					new_x = target - dragged_obj.width;
-				}
-				new_snap_lines.push({ type: 'v', position: target });
-			}
+            if (best_snap_x) {
+                const { point_name, target } = best_snap_x;
+                if (point_name === 'left') {
+                    new_x = target;
+                } else if (point_name === 'h_center') {
+                    new_x = target - dragged_obj.width / 2;
+                } else if (point_name === 'right') {
+                    new_x = target - dragged_obj.width;
+                }
+                new_snap_lines.push({ type: 'v', position: target });
+            }
 
-			let best_snap_y = null;
-			let min_dist_y = snap_threshold;
+            let best_snap_y = null;
+            let min_dist_y = snap_threshold;
 
-			const dragged_points_y = {
-				top: dragged_bounds.top,
-				v_center: dragged_bounds.v_center,
-				bottom: dragged_bounds.bottom,
-			};
+            const dragged_points_y = {
+                top: dragged_bounds.top,
+                v_center: dragged_bounds.v_center,
+                bottom: dragged_bounds.bottom,
+            };
 
-			for (const target_y of snap_targets_v) {
-				for (const [point_name, point_pos] of Object.entries(
-					dragged_points_y,
-				)) {
-					const dist = Math.abs(point_pos - target_y);
-					if (dist < min_dist_y) {
-						min_dist_y = dist;
-						best_snap_y = { point_name, target: target_y };
-					}
-				}
-			}
+            for (const target_y of snap_targets_v) {
+                for (const [point_name, point_pos] of Object.entries(
+                    dragged_points_y,
+                )) {
+                    const dist = Math.abs(point_pos - target_y);
+                    if (dist < min_dist_y) {
+                        min_dist_y = dist;
+                        best_snap_y = { point_name, target: target_y };
+                    }
+                }
+            }
 
-			if (best_snap_y) {
-				const { point_name, target } = best_snap_y;
-				if (point_name === 'top') {
-					new_y = target;
-				} else if (point_name === 'v_center') {
-					new_y = target - dragged_obj.height / 2;
-				} else if (point_name === 'bottom') {
-					new_y = target - dragged_obj.height;
-				}
-				new_snap_lines.push({ type: 'h', position: target });
-			}
+            if (best_snap_y) {
+                const { point_name, target } = best_snap_y;
+                if (point_name === 'top') {
+                    new_y = target;
+                } else if (point_name === 'v_center') {
+                    new_y = target - dragged_obj.height / 2;
+                } else if (point_name === 'bottom') {
+                    new_y = target - dragged_obj.height;
+                }
+                new_snap_lines.push({ type: 'h', position: target });
+            }
 
-			// --- End of new snap logic ---
+            // --- End of new snap logic ---
 
-			snap_lines = new_snap_lines;
+            snap_lines = new_snap_lines;
 
-			selected_object.x = new_x;
-			selected_object.y = new_y;
+            selected_object.x = new_x;
+            selected_object.y = new_y;
 
-			const current_bounds_drag = {
-				left: selected_object.x,
-				top: selected_object.y,
-				right: selected_object.x + selected_object.width,
-				bottom: selected_object.y + selected_object.height,
-			};
+            const current_bounds_drag = {
+                left: selected_object.x,
+                top: selected_object.y,
+                right: selected_object.x + selected_object.width,
+                bottom: selected_object.y + selected_object.height,
+            };
 
-			let h_distances = [];
-			let v_distances = [];
+            let h_distances = [];
+            let v_distances = [];
 
-			// Check against canvas edges
-			h_distances.push({ dist: Math.abs(current_bounds_drag.left - 0), direction: 'left' });
-			h_distances.push({ dist: Math.abs(current_bounds_drag.right - canvas_right), direction: 'right' });
-			v_distances.push({ dist: Math.abs(current_bounds_drag.top - 0), direction: 'top' });
-			v_distances.push({ dist: Math.abs(current_bounds_drag.bottom - canvas_bottom), direction: 'bottom' });
+            // Check against canvas edges
+            h_distances.push({
+                dist: Math.abs(current_bounds_drag.left - 0),
+                direction: 'left',
+            });
+            h_distances.push({
+                dist: Math.abs(current_bounds_drag.right - canvas_right),
+                direction: 'right',
+            });
+            v_distances.push({
+                dist: Math.abs(current_bounds_drag.top - 0),
+                direction: 'top',
+            });
+            v_distances.push({
+                dist: Math.abs(current_bounds_drag.bottom - canvas_bottom),
+                direction: 'bottom',
+            });
 
-			// Check against other objects
-			objects.filter(o => o.id !== selected_object.id).forEach(o => {
-				h_distances.push({ dist: Math.abs(current_bounds_drag.left - (o.x + o.width)), direction: 'left' });
-				h_distances.push({ dist: Math.abs(current_bounds_drag.right - o.x), direction: 'right' });
-				v_distances.push({ dist: Math.abs(current_bounds_drag.top - (o.y + o.height)), direction: 'top' });
-				v_distances.push({ dist: Math.abs(current_bounds_drag.bottom - o.y), direction: 'bottom' });
-			});
+            // Check against other objects
+            objects
+                .filter((o) => o.id !== selected_object.id)
+                .forEach((o) => {
+                    h_distances.push({
+                        dist: Math.abs(
+                            current_bounds_drag.left - (o.x + o.width),
+                        ),
+                        direction: 'left',
+                    });
+                    h_distances.push({
+                        dist: Math.abs(current_bounds_drag.right - o.x),
+                        direction: 'right',
+                    });
+                    v_distances.push({
+                        dist: Math.abs(
+                            current_bounds_drag.top - (o.y + o.height),
+                        ),
+                        direction: 'top',
+                    });
+                    v_distances.push({
+                        dist: Math.abs(current_bounds_drag.bottom - o.y),
+                        direction: 'bottom',
+                    });
+                });
 
-			const min_h_dist = h_distances.sort((a,b) => a.dist - b.dist)[0];
-			const min_v_dist = v_distances.sort((a,b) => a.dist - b.dist)[0];
+            const min_h_dist = h_distances.sort((a, b) => a.dist - b.dist)[0];
+            const min_v_dist = v_distances.sort((a, b) => a.dist - b.dist)[0];
 
-			const new_distance_info = [];
-			if (min_h_dist && min_h_dist.dist > 0.5) {
-				new_distance_info.push({ distance: Math.round(min_h_dist.dist), direction: min_h_dist.direction });
-			}
-			if (min_v_dist && min_v_dist.dist > 0.5) {
-				new_distance_info.push({ distance: Math.round(min_v_dist.dist), direction: min_v_dist.direction });
-			}
+            const new_distance_info = [];
+            if (min_h_dist && min_h_dist.dist > 0.5) {
+                new_distance_info.push({
+                    distance: Math.round(min_h_dist.dist),
+                    direction: min_h_dist.direction,
+                });
+            }
+            if (min_v_dist && min_v_dist.dist > 0.5) {
+                new_distance_info.push({
+                    distance: Math.round(min_v_dist.dist),
+                    direction: min_v_dist.direction,
+                });
+            }
 
-			if (new_distance_info.length > 0) {
-				distance_info = new_distance_info;
-			} else {
-				distance_info = null;
-			}
+            if (new_distance_info.length > 0) {
+                distance_info = new_distance_info;
+            } else {
+                distance_info = null;
+            }
 
-			objects = objects.map((obj) =>
-				obj.id === selected_object.id ? selected_object : obj,
-			);
-		} else if (is_resizing) {
-			const result = handle_resize(event, selected_object, resize_edge);
-			selected_object.width = result.width;
-			selected_object.height = result.height;
-			selected_object.x = result.x;
-			selected_object.y = result.y;
+            objects = objects.map((obj) =>
+                obj.id === selected_object.id ? selected_object : obj,
+            );
+        } else if (is_resizing) {
+            const result = handle_resize(event, selected_object, resize_edge);
+            selected_object.width = result.width;
+            selected_object.height = result.height;
+            selected_object.x = result.x;
+            selected_object.y = result.y;
 
-			// Calculate and update distance_info
-			const current_bounds = {
-				left: selected_object.x,
-				top: selected_object.y,
-				right: selected_object.x + selected_object.width,
-				bottom: selected_object.y + selected_object.height,
-			};
+            // Calculate and update distance_info
+            const current_bounds = {
+                left: selected_object.x,
+                top: selected_object.y,
+                right: selected_object.x + selected_object.width,
+                bottom: selected_object.y + selected_object.height,
+            };
 
-			let min_distance = Infinity;
-			let distance_direction = '';
+            let min_distance = Infinity;
+            let distance_direction = '';
 
-			const canvas_width = width * scale;
-			const canvas_height = height * scale;
+            const canvas_width = width * scale;
+            const canvas_height = height * scale;
 
-			const check_distance = (current_pos, target_pos, direction) => {
-				const dist = Math.abs(current_pos - target_pos);
-				if (dist < min_distance) {
-					min_distance = dist;
-					distance_direction = direction;
-				}
-			};
+            const check_distance = (current_pos, target_pos, direction) => {
+                const dist = Math.abs(current_pos - target_pos);
+                if (dist < min_distance) {
+                    min_distance = dist;
+                    distance_direction = direction;
+                }
+            };
 
-			// Check against canvas edges
-			if (resize_edge.includes('left')) {
-				check_distance(current_bounds.left, 0, 'left');
-			} else if (resize_edge.includes('right')) {
-				check_distance(current_bounds.right, canvas_width, 'right');
-			}
+            // Check against canvas edges
+            if (resize_edge.includes('left')) {
+                check_distance(current_bounds.left, 0, 'left');
+            } else if (resize_edge.includes('right')) {
+                check_distance(current_bounds.right, canvas_width, 'right');
+            }
 
-			if (resize_edge.includes('top')) {
-				check_distance(current_bounds.top, 0, 'top');
-			} else if (resize_edge.includes('bottom')) {
-				check_distance(current_bounds.bottom, canvas_height, 'bottom');
-			}
+            if (resize_edge.includes('top')) {
+                check_distance(current_bounds.top, 0, 'top');
+            } else if (resize_edge.includes('bottom')) {
+                check_distance(current_bounds.bottom, canvas_height, 'bottom');
+            }
 
-			// Check against other objects
-			objects
-				.filter((o) => o.id !== selected_object.id)
-				.forEach((o) => {
-					if (resize_edge.includes('left')) {
-						check_distance(current_bounds.left, o.x + o.width, 'left');
-					} else if (resize_edge.includes('right')) {
-						check_distance(current_bounds.right, o.x, 'right');
-					}
+            // Check against other objects
+            objects
+                .filter((o) => o.id !== selected_object.id)
+                .forEach((o) => {
+                    if (resize_edge.includes('left')) {
+                        check_distance(
+                            current_bounds.left,
+                            o.x + o.width,
+                            'left',
+                        );
+                    } else if (resize_edge.includes('right')) {
+                        check_distance(current_bounds.right, o.x, 'right');
+                    }
 
-					if (resize_edge.includes('top')) {
-						check_distance(current_bounds.top, o.y + o.height, 'top');
-					} else if (resize_edge.includes('bottom')) {
-						check_distance(current_bounds.bottom, o.y, 'bottom');
-					}
-				});
+                    if (resize_edge.includes('top')) {
+                        check_distance(
+                            current_bounds.top,
+                            o.y + o.height,
+                            'top',
+                        );
+                    } else if (resize_edge.includes('bottom')) {
+                        check_distance(current_bounds.bottom, o.y, 'bottom');
+                    }
+                });
 
-			if (min_distance !== Infinity && min_distance > 0) {
-				distance_info = [{
-					distance: Math.round(min_distance),
-					direction: distance_direction,
-				}];
-			} else {
-				distance_info = null;
-			}
+            if (min_distance !== Infinity && min_distance > 0) {
+                distance_info = [
+                    {
+                        distance: Math.round(min_distance),
+                        direction: distance_direction,
+                    },
+                ];
+            } else {
+                distance_info = null;
+            }
 
-			objects = objects.map((obj) =>
-				obj.id === selected_object.id ? selected_object : obj,
-			);
-		} else if (is_rotating) {
-			handle_rotate(event, selected_object);
-		}
-	}
+            objects = objects.map((obj) =>
+                obj.id === selected_object.id ? selected_object : obj,
+            );
+        } else if (is_rotating) {
+            handle_rotate(event, selected_object);
+        }
+    }
 
     /**
      * @description 마우스 버튼에서 손을 뗄 때, 진행 중이던 모든 조작(드래그, 리사이즈, 회전)을 종료합니다.
@@ -1056,15 +1112,15 @@
     async function save_image(type = 'png') {
         // 'obj' 타입 요청 시, 현재 히스토리 상태를 깊은 복사하여 JSON 객체로 반환합니다.
         if (type === 'obj') {
-            return JSON.parse(
-                JSON.stringify(history[current_history_index]),
-            );
+            return JSON.parse(JSON.stringify(history[current_history_index]));
         }
 
         // 이미지로 저장할 때 화면에 보이는 스냅 라인을 일시적으로 숨깁니다.
         const snap_line_elements = canvas?.querySelectorAll('.snap-line');
         if (snap_line_elements) {
-            snap_line_elements.forEach(el => el.style.visibility = 'hidden');
+            snap_line_elements.forEach(
+                (el) => (el.style.visibility = 'hidden'),
+            );
         }
 
         try {
@@ -1085,7 +1141,9 @@
         } finally {
             // 이미지 생성이 성공하든 실패하든, 숨겼던 스냅 라인을 다시 보이게 처리합니다.
             if (snap_line_elements) {
-                snap_line_elements.forEach(el => el.style.visibility = 'visible');
+                snap_line_elements.forEach(
+                    (el) => (el.style.visibility = 'visible'),
+                );
             }
         }
     }
@@ -1154,25 +1212,25 @@
                                     e.detail.edge,
                                 )}
                             on:select_object={(e) => select_object(e.detail)}
-                    />
-                {/if}
-            {/each}
-            {#each snap_lines as line}
-                {#if line.type === 'v'}
-                    <div
-                        class="snap-line vertical"
-                        style="left: {line.position}px;"
-                    ></div>
-                {:else}
-                    <div
-                        class="snap-line horizontal"
-                        style="top: {line.position}px;"
-                    ></div>
-                {/if}
-            {/each}
+                        />
+                    {/if}
+                {/each}
+                {#each snap_lines as line}
+                    {#if line.type === 'v'}
+                        <div
+                            class="snap-line vertical"
+                            style="left: {line.position}px;"
+                        ></div>
+                    {:else}
+                        <div
+                            class="snap-line horizontal"
+                            style="top: {line.position}px;"
+                        ></div>
+                    {/if}
+                {/each}
+            </div>
         </div>
     </div>
-</div>
 </div>
 
 <style>
