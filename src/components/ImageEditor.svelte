@@ -49,6 +49,7 @@
     let show_rotation_angle = false; // 회전 각도 표시 여부
     let rotate_handle_position = false; // 회전 핸들 위치 (상/하)
     let snap_lines = []; // 스냅 라인
+    let show_resize_info = false; // 리사이즈 정보 표시 여부
 
     // 히스토리(undo/redo) 관련 상태 변수
     let history = []; // 객체 상태 변화를 저장하는 배열
@@ -543,6 +544,7 @@
             start_y = event.clientY - obj.y;
         } else if (type === 'resize') {
             is_resizing = true;
+            show_resize_info = true; // 리사이즈 시작 시 정보 표시
             resize_edge = edge;
             start_x = event.clientX;
             start_y = event.clientY;
@@ -723,6 +725,7 @@
         is_resizing = false;
         is_rotating = false;
         show_rotation_angle = false;
+        show_resize_info = false; // 리사이즈 종료 시 정보 숨김
         resize_edge = null;
         snap_lines = [];
     }
@@ -859,6 +862,7 @@
                             {get_rotate_handle_position}
                             {show_rotation_angle}
                             {selected_object}
+                            {show_resize_info}
                             on:mouse_down={(e) =>
                                 handle_mouse_down(
                                     e.detail.event,
@@ -878,6 +882,7 @@
                             {get_rotate_handle_position}
                             {show_rotation_angle}
                             {selected_object}
+                            {show_resize_info}
                             on:mouse_down={(e) =>
                                 handle_mouse_down(
                                     e.detail.event,
@@ -886,10 +891,9 @@
                                     e.detail.edge,
                                 )}
                             on:select_object={(e) => select_object(e.detail)}
-                        />
-                    {/if}
-                {/each}
-            </div>
+                    />
+                {/if}
+            {/each}
             {#each snap_lines as line}
                 {#if line.type === 'v'}
                     <div
@@ -905,6 +909,7 @@
             {/each}
         </div>
     </div>
+</div>
 </div>
 
 <style>
@@ -959,6 +964,17 @@
         height: 1px;
         width: 100%;
         left: 0;
+    }
+    .resize-info {
+        position: absolute;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        transform: translateX(-50%);
+        pointer-events: none;
+        white-space: nowrap;
     }
 
 </style>

@@ -7,6 +7,7 @@
     export let get_rotate_handle_position; // 회전 핸들 위치 계산 함수
     export let show_rotation_angle; // 회전 각도 표시 여부
     export let selected_object; // 현재 선택된 객체 정보
+    export let show_resize_info; // 리사이즈 정보 표시 여부
 
     // 부모 컴포넌트로 이벤트를 전달하기 위한 디스패처 생성
     const dispatch = createEventDispatcher();
@@ -106,6 +107,11 @@
         {#if show_rotation_angle && obj.id === selected_object?.id}
             <div class="rotation-angle">
                 {(Math.round(obj.angle) + 360) % 360}°
+            </div>
+        {/if}
+        {#if show_resize_info && obj.id === selected_object?.id}
+            <div class="resize-info">
+                {Math.round(obj.width)} x {Math.round(obj.height)}
             </div>
         {/if}
     </div>
@@ -220,5 +226,19 @@
         border-radius: 4px;
         font-size: 12px;
         pointer-events: none;
+    }
+
+    .resize-info {
+        position: absolute;
+        top: -50px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 12px;
+        pointer-events: none;
+        white-space: nowrap;
     }
 </style>
