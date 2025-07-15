@@ -82,8 +82,10 @@
             on:focus={() => dispatch('text_edit_start')}
             on:blur={() => dispatch('text_edit_end')}
             on:input={(e) => {
-                obj.text = e.target.innerHTML;
-                dispatch('update_object', obj);
+                if(obj.text !== e.target.innerHTML){
+                    obj.text = e.target.innerHTML;
+                    dispatch('update_object', obj);
+                }
             }}
         ></div>
         <div

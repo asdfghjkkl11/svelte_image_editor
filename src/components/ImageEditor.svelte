@@ -345,8 +345,12 @@
      * 현재 객체 상태를 히스토리 배열에 저장합니다.
      */
     function save_to_history() {
+        const current_state = JSON.stringify(objects);
+        if (history.length > 0 && history[current_history_index] === current_state) {
+            return; // 변경 사항이 없으면 저장하지 않음
+        }
         history = history.slice(0, current_history_index + 1);
-        history.push(JSON.stringify(objects));
+        history.push(current_state);
         current_history_index = history.length - 1;
         history_length = history.length;
     }
@@ -591,12 +595,9 @@
 			snap_targets_h.push(0, canvas_h_center, canvas_right);
 			snap_targets_v.push(0, canvas_v_center, canvas_bottom);
 
-			// Other objects snap targets
 			objects
 				.filter((o) => o.id !== dragged_obj.id)
 				.forEach((o) => {
-					// For now, we only snap to un-rotated bounding boxes of other objects
-					// for simplicity.
 					snap_targets_h.push(
 						o.x,
 						o.x + o.width / 2,
@@ -609,7 +610,6 @@
 					);
 				});
 
-			// Add distribution snap targets (midpoints between centers of other objects)
 			for (let i = 0; i < objects.length; i++) {
 				if (objects[i].id === dragged_obj.id) continue;
 				for (let j = i + 1; j < objects.length; j++) {
@@ -618,17 +618,14 @@
 					const obj1 = objects[i];
 					const obj2 = objects[j];
 
-					// Horizontal midpoint between centers
 					const mid_center_x = (obj1.x + obj1.width / 2 + obj2.x + obj2.width / 2) / 2;
 					snap_targets_h.push(mid_center_x);
 
-					// Vertical midpoint between centers
 					const mid_center_y = (obj1.y + obj1.height / 2 + obj2.y + obj2.height / 2) / 2;
 					snap_targets_v.push(mid_center_y);
 				}
 			}
 
-			// Find the best snap for each axis independently
 			let best_snap_x = null;
 			let min_dist_x = snap_threshold;
 
@@ -740,8 +737,39 @@
             event.target === canvas_container ||
             event.target === canvas_wrapper
         ) {
+            is_history_action = true;
             selected_object = {};
             objects = objects.map((o) => ({ ...o, selected: false }));
+        }
+    }
+
+    /**
+     * 키보드 이벤트 핸들러 (단축키 처리).
+     * @param {KeyboardEvent} event - 키보드 이벤트.
+     */
+    function handle_keydown(event) {
+        // 텍스트 편집 중에는 단축키 비활성화
+        if (is_editing_text) return;
+
+        if (selected_object.id) {
+            if (event.key === 'Delete' || event.key === 'Backspace') {
+                delete_object();
+                event.preventDefault(); // 브라우저 기본 동작 방지
+            } else if ((event.ctrlKey || event.metaKey) && event.key === 'd') {
+                duplicate_object();
+                event.preventDefault();
+            }
+        }
+
+        if ((event.ctrlKey || event.metaKey) && event.key === 'z') {
+            undo();
+            event.preventDefault();
+        } else if (
+            (event.ctrlKey || event.metaKey) &&
+            (event.key === 'y' || (event.shiftKey && event.key === 'Z'))
+        ) {
+            redo();
+            event.preventDefault();
         }
     }
 
@@ -805,6 +833,8 @@
     class="canvas-wrapper"
     bind:this={canvas_wrapper}
     on:mousedown={handle_canvas_mouse_down}
+    on:keydown={handle_keydown}
+    tabindex="0"
 >
     <div
         class="canvas-container"
@@ -885,6 +915,9 @@
         flex: 1;
         overflow: scroll;
     }
+    .canvas-wrapper:focus {
+        outline: none;
+    }
 
     .canvas-container {
         height: 100%;
@@ -927,4 +960,5 @@
         width: 100%;
         left: 0;
     }
+
 </style>
