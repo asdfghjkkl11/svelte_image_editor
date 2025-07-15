@@ -410,81 +410,88 @@
      * @returns {{width: number, height: number, x: number, y: number}} 새 크기 및 위치.
      */
     function handle_resize(event, object, edge) {
-        const rad = (object.angle * Math.PI) / 180;
-        const cos = Math.cos(rad);
-        const sin = Math.sin(rad);
+		const rad = (object.angle * Math.PI) / 180;
+		const cos = Math.cos(rad);
+		const sin = Math.sin(rad);
 
-        const mouse_x = event.clientX - canvas_rect.left;
-        const mouse_y = event.clientY - canvas_rect.top;
+		let mouse_x = event.clientX - canvas_rect.left;
+		let mouse_y = event.clientY - canvas_rect.top;
 
-        const center_x = start_obj_x + start_width / 2;
-        const center_y = start_obj_y + start_height / 2;
+		if (event.shiftKey) {
+			const canvas_width = width * scale;
+			const canvas_height = height * scale;
+			mouse_x = Math.max(0, Math.min(mouse_x, canvas_width));
+			mouse_y = Math.max(0, Math.min(mouse_y, canvas_height));
+		}
 
-        const dir_x = edge.includes('left')
-            ? -1
-            : edge.includes('right')
-              ? 1
-              : 0;
-        const dir_y = edge.includes('top')
-            ? -1
-            : edge.includes('bottom')
-              ? 1
-              : 0;
+		const center_x = start_obj_x + start_width / 2;
+		const center_y = start_obj_y + start_height / 2;
 
-        const pivot_local_x = (-dir_x * start_width) / 2;
-        const pivot_local_y = (-dir_y * start_height) / 2;
-        const pivot_offset_x = pivot_local_x * cos - pivot_local_y * sin;
-        const pivot_offset_y = pivot_local_x * sin + pivot_local_y * cos;
-        const pivot_x = center_x + pivot_offset_x;
-        const pivot_y = center_y + pivot_offset_y;
+		const dir_x = edge.includes('left')
+			? -1
+			: edge.includes('right')
+			  ? 1
+			  : 0;
+		const dir_y = edge.includes('top')
+			? -1
+			: edge.includes('bottom')
+			  ? 1
+			  : 0;
 
-        const vec_x = mouse_x - pivot_x;
-        const vec_y = mouse_y - pivot_y;
+		const pivot_local_x = (-dir_x * start_width) / 2;
+		const pivot_local_y = (-dir_y * start_height) / 2;
+		const pivot_offset_x = pivot_local_x * cos - pivot_local_y * sin;
+		const pivot_offset_y = pivot_local_x * sin + pivot_local_y * cos;
+		const pivot_x = center_x + pivot_offset_x;
+		const pivot_y = center_y + pivot_offset_y;
 
-        const unrotated_dx = vec_x * cos + vec_y * sin;
-        const unrotated_dy = -vec_x * sin + vec_y * cos;
+		const vec_x = mouse_x - pivot_x;
+		const vec_y = mouse_y - pivot_y;
 
-        let new_width, new_height;
+		const unrotated_dx = vec_x * cos + vec_y * sin;
+		const unrotated_dy = -vec_x * sin + vec_y * cos;
 
-        if (dir_x === 0) {
-            new_width = start_width;
-            new_height = Math.max(min_size, Math.abs(unrotated_dy));
-        } else if (dir_y === 0) {
-            new_width = Math.max(min_size, Math.abs(unrotated_dx));
-            new_height = start_height;
-        } else {
-            new_width = Math.max(min_size, Math.abs(unrotated_dx));
-            new_height = Math.max(min_size, Math.abs(unrotated_dy));
-        }
+		let new_width, new_height;
 
-        let final_unrotated_dx = unrotated_dx;
-        let final_unrotated_dy = unrotated_dy;
+		if (dir_x === 0) {
+			new_width = start_width;
+			new_height = Math.max(min_size, Math.abs(unrotated_dy));
+		} else if (dir_y === 0) {
+			new_width = Math.max(min_size, Math.abs(unrotated_dx));
+			new_height = start_height;
+		} else {
+			new_width = Math.max(min_size, Math.abs(unrotated_dx));
+			new_height = Math.max(min_size, Math.abs(unrotated_dy));
+		}
 
-        if (dir_x === 0) {
-            // 상하 리사이즈 시에는 수평 이동 벡터를 0으로 설정
-            final_unrotated_dx = 0;
-        }
-        if (dir_y === 0) {
-            // 좌우 리사이즈 시에는 수직 이동 벡터를 0으로 설정
-            final_unrotated_dy = 0;
-        }
+		let final_unrotated_dx = unrotated_dx;
+		let final_unrotated_dy = unrotated_dy;
 
-        const center_offset_local_x = final_unrotated_dx / 2;
-        const center_offset_local_y = final_unrotated_dy / 2;
-        const center_offset_x =
-            center_offset_local_x * cos - center_offset_local_y * sin;
-        const center_offset_y =
-            center_offset_local_x * sin + center_offset_local_y * cos;
-        const new_center_x = pivot_x + center_offset_x;
-        const new_center_y = pivot_y + center_offset_y;
+		if (dir_x === 0) {
+			// 상하 리사이즈 시에는 수평 이동 벡터를 0으로 설정
+			final_unrotated_dx = 0;
+		}
+		if (dir_y === 0) {
+			// 좌우 리사이즈 시에는 수직 이동 벡터를 0으로 설정
+			final_unrotated_dy = 0;
+		}
 
-        return {
-            width: new_width,
-            height: new_height,
-            x: new_center_x - new_width / 2,
-            y: new_center_y - new_height / 2,
-        };
-    }
+		const center_offset_local_x = final_unrotated_dx / 2;
+		const center_offset_local_y = final_unrotated_dy / 2;
+		const center_offset_x =
+			center_offset_local_x * cos - center_offset_local_y * sin;
+		const center_offset_y =
+			center_offset_local_x * sin + center_offset_local_y * cos;
+		const new_center_x = pivot_x + center_offset_x;
+		const new_center_y = pivot_y + center_offset_y;
+
+		return {
+			width: new_width,
+			height: new_height,
+			x: new_center_x - new_width / 2,
+			y: new_center_y - new_height / 2,
+		};
+	}
 
     /**
      * 객체 회전 로직을 처리합니다.
