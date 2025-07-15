@@ -8,7 +8,7 @@
     export let show_rotation_angle; // 회전 각도 표시 여부
     export let selected_object; // 현재 선택된 객체 정보
     export let show_resize_info; // 리사이즈 정보 표시 여부
-    export let resize_distance_info; // 리사이즈 거리 정보
+    export let distance_info; // 거리 정보
 
     // 부모 컴포넌트로 이벤트를 전달하기 위한 디스패처 생성
     const dispatch = createEventDispatcher();
@@ -140,24 +140,26 @@
                 {Math.round(obj.width)} x {Math.round(obj.height)}
             </div>
         {/if}
-        {#if resize_distance_info && obj.id === selected_object?.id}
+        {#if distance_info && obj.id === selected_object?.id}
+            {#each distance_info as info}
             <div
                 class="resize-distance-info"
                 style="
-                    {resize_distance_info.direction.includes('top')
+                    {info.direction.includes('top')
                         ? 'bottom: 100%; top: unset;'
                         : 'top: 100%; bottom: unset;'}
-                    {resize_distance_info.direction.includes('left')
+                    {info.direction.includes('left')
                         ? 'right: 100%; left: unset;'
                         : 'left: 100%; right: unset;'}
                     transform: translate(
-                        {resize_distance_info.direction.includes('left') || resize_distance_info.direction.includes('right') ? (resize_distance_info.direction.includes('left') ? 'calc(-100% - 10px)' : '10px') : '-50%'},
-                        {resize_distance_info.direction.includes('top') || resize_distance_info.direction.includes('bottom') ? (resize_distance_info.direction.includes('top') ? 'calc(-100% - 10px)' : '10px') : '-50%'}
+                        {info.direction.includes('left') || info.direction.includes('right') ? (info.direction.includes('left') ? 'calc(-100% - 10px)' : '10px') : '-50%'},
+                        {info.direction.includes('top') || info.direction.includes('bottom') ? (info.direction.includes('top') ? 'calc(-100% - 10px)' : '10px') : '-50%'}
                     );
                 "
             >
-                {resize_distance_info.distance}px
+                {info.distance}px
             </div>
+            {/each}
         {/if}
     </div>
 {/if}

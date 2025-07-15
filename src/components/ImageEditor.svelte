@@ -49,8 +49,8 @@
     let show_rotation_angle = false; // 회전 각도 표시 여부
     let rotate_handle_position = false; // 회전 핸들 위치 (상/하)
     let snap_lines = []; // 스냅 라인
-    let show_resize_info = false; // 리사이즈 정보 표시 여부
-    let resize_distance_info = null; // { distance: number, direction: string }
+    let show_resize_info = false; // 리사이즈 정보 표시 여
+    let distance_info = null; // { distance: number, direction: string }
 
     // 히스토리(undo/redo) 관련 상태 변수
     let history = []; // 객체 상태 변화를 저장하는 배열
@@ -596,6 +596,11 @@
 			let new_x = event.clientX - start_x;
 			let new_y = event.clientY - start_y;
 
+			if (event.shiftKey) {
+				new_x = Math.round(new_x / 2) * 2;
+				new_y = Math.round(new_y / 2) * 2;
+			}
+
 			const snap_threshold = 5;
 			const new_snap_lines = [];
 			const dragged_obj = selected_object;
@@ -623,28 +628,28 @@
 			snap_targets_h.push(0, canvas_h_center, canvas_right);
 			snap_targets_v.push(0, canvas_v_center, canvas_bottom);
 
-			objects
-				.filter((o) => o.id !== dragged_obj.id)
-				.forEach((o) => {
-					snap_targets_h.push(
-						o.x,
-						o.x + o.width / 2,
-						o.x + o.width,
-					);
-					snap_targets_v.push(
-						o.y,
-						o.y + o.height / 2,
-						o.y + o.height,
-					);
-				});
+			const other_objects = objects.filter(o => o.id !== dragged_obj.id);
 
-			for (let i = 0; i < objects.length; i++) {
-				if (objects[i].id === dragged_obj.id) continue;
-				for (let j = i + 1; j < objects.length; j++) {
-					if (objects[j].id === dragged_obj.id) continue;
+			other_objects.forEach(o => {
+				const obj_h_center = o.x + o.width / 2;
+				const obj_v_center = o.y + o.height / 2;
 
-					const obj1 = objects[i];
-					const obj2 = objects[j];
+				// Add object's own snap points
+				snap_targets_h.push(o.x, obj_h_center, o.x + o.width);
+				snap_targets_v.push(o.y, obj_v_center, o.y + o.height);
+
+				// Add midpoints between object and canvas edges
+				snap_targets_h.push(obj_h_center / 2); // Midpoint with left edge (0)
+				snap_targets_h.push((obj_h_center + canvas_right) / 2); // Midpoint with right edge
+				snap_targets_v.push(obj_v_center / 2); // Midpoint with top edge (0)
+				snap_targets_v.push((obj_v_center + canvas_bottom) / 2); // Midpoint with bottom edge
+			});
+
+			// Add midpoints between pairs of other objects
+			for (let i = 0; i < other_objects.length; i++) {
+				for (let j = i + 1; j < other_objects.length; j++) {
+					const obj1 = other_objects[i];
+					const obj2 = other_objects[j];
 
 					const mid_center_x = (obj1.x + obj1.width / 2 + obj2.x + obj2.width / 2) / 2;
 					snap_targets_h.push(mid_center_x);
@@ -726,6 +731,48 @@
 
 			selected_object.x = new_x;
 			selected_object.y = new_y;
+
+			const current_bounds_drag = {
+				left: selected_object.x,
+				top: selected_object.y,
+				right: selected_object.x + selected_object.width,
+				bottom: selected_object.y + selected_object.height,
+			};
+
+			let h_distances = [];
+			let v_distances = [];
+
+			// Check against canvas edges
+			h_distances.push({ dist: Math.abs(current_bounds_drag.left - 0), direction: 'left' });
+			h_distances.push({ dist: Math.abs(current_bounds_drag.right - canvas_right), direction: 'right' });
+			v_distances.push({ dist: Math.abs(current_bounds_drag.top - 0), direction: 'top' });
+			v_distances.push({ dist: Math.abs(current_bounds_drag.bottom - canvas_bottom), direction: 'bottom' });
+
+			// Check against other objects
+			objects.filter(o => o.id !== selected_object.id).forEach(o => {
+				h_distances.push({ dist: Math.abs(current_bounds_drag.left - (o.x + o.width)), direction: 'left' });
+				h_distances.push({ dist: Math.abs(current_bounds_drag.right - o.x), direction: 'right' });
+				v_distances.push({ dist: Math.abs(current_bounds_drag.top - (o.y + o.height)), direction: 'top' });
+				v_distances.push({ dist: Math.abs(current_bounds_drag.bottom - o.y), direction: 'bottom' });
+			});
+
+			const min_h_dist = h_distances.sort((a,b) => a.dist - b.dist)[0];
+			const min_v_dist = v_distances.sort((a,b) => a.dist - b.dist)[0];
+
+			const new_distance_info = [];
+			if (min_h_dist && min_h_dist.dist > 0.5) {
+				new_distance_info.push({ distance: Math.round(min_h_dist.dist), direction: min_h_dist.direction });
+			}
+			if (min_v_dist && min_v_dist.dist > 0.5) {
+				new_distance_info.push({ distance: Math.round(min_v_dist.dist), direction: min_v_dist.direction });
+			}
+
+			if (new_distance_info.length > 0) {
+				distance_info = new_distance_info;
+			} else {
+				distance_info = null;
+			}
+
 			objects = objects.map((obj) =>
 				obj.id === selected_object.id ? selected_object : obj,
 			);
@@ -736,7 +783,7 @@
 			selected_object.x = result.x;
 			selected_object.y = result.y;
 
-			// Calculate and update resize_distance_info
+			// Calculate and update distance_info
 			const current_bounds = {
 				left: selected_object.x,
 				top: selected_object.y,
@@ -771,13 +818,30 @@
 				check_distance(current_bounds.bottom, canvas_height, 'bottom');
 			}
 
+			// Check against other objects
+			objects
+				.filter((o) => o.id !== selected_object.id)
+				.forEach((o) => {
+					if (resize_edge.includes('left')) {
+						check_distance(current_bounds.left, o.x + o.width, 'left');
+					} else if (resize_edge.includes('right')) {
+						check_distance(current_bounds.right, o.x, 'right');
+					}
+
+					if (resize_edge.includes('top')) {
+						check_distance(current_bounds.top, o.y + o.height, 'top');
+					} else if (resize_edge.includes('bottom')) {
+						check_distance(current_bounds.bottom, o.y, 'bottom');
+					}
+				});
+
 			if (min_distance !== Infinity && min_distance > 0) {
-				resize_distance_info = {
+				distance_info = [{
 					distance: Math.round(min_distance),
 					direction: distance_direction,
-				};
+				}];
 			} else {
-				resize_distance_info = null;
+				distance_info = null;
 			}
 
 			objects = objects.map((obj) =>
@@ -797,7 +861,7 @@
         is_rotating = false;
         show_rotation_angle = false;
         show_resize_info = false; // 리사이즈 종료 시 정보 숨김
-        resize_distance_info = null; // 리사이즈 종료 시 거리 정보 숨김
+        distance_info = null; // 리사이즈 종료 시 거리 정보 숨김
         resize_edge = null;
         snap_lines = [];
     }
@@ -935,7 +999,7 @@
                             {show_rotation_angle}
                             {selected_object}
                             {show_resize_info}
-                            {resize_distance_info}
+                            {distance_info}
                             on:mouse_down={(e) =>
                                 handle_mouse_down(
                                     e.detail.event,
@@ -956,7 +1020,7 @@
                             {show_rotation_angle}
                             {selected_object}
                             {show_resize_info}
-                            {resize_distance_info}
+                            {distance_info}
                             on:mouse_down={(e) =>
                                 handle_mouse_down(
                                     e.detail.event,
