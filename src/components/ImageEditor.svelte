@@ -609,6 +609,25 @@
 					);
 				});
 
+			// Add distribution snap targets (midpoints between centers of other objects)
+			for (let i = 0; i < objects.length; i++) {
+				if (objects[i].id === dragged_obj.id) continue;
+				for (let j = i + 1; j < objects.length; j++) {
+					if (objects[j].id === dragged_obj.id) continue;
+
+					const obj1 = objects[i];
+					const obj2 = objects[j];
+
+					// Horizontal midpoint between centers
+					const mid_center_x = (obj1.x + obj1.width / 2 + obj2.x + obj2.width / 2) / 2;
+					snap_targets_h.push(mid_center_x);
+
+					// Vertical midpoint between centers
+					const mid_center_y = (obj1.y + obj1.height / 2 + obj2.y + obj2.height / 2) / 2;
+					snap_targets_v.push(mid_center_y);
+				}
+			}
+
 			// Find the best snap for each axis independently
 			let best_snap_x = null;
 			let min_dist_x = snap_threshold;
