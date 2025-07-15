@@ -21,60 +21,74 @@
     };
 
     /**
-     * 파일 입력(input) 변경 시 호출되는 이벤트 핸들러.
+     * @description 파일 입력(input) 변경 시 호출되는 이벤트 핸들러입니다.
      * 선택된 이미지 파일을 읽어 데이터 URL로 변환하고 `uploaded_images` 배열에 추가합니다.
      * @param {Event} event - 파일 입력 변경 이벤트
      */
     function handle_image_upload(event) {
+        // 이벤트에서 사용자가 선택한 첫 번째 파일을 가져옵니다.
         const file = event.target.files[0];
+        // 파일이 존재하는지 확인합니다.
         if (file) {
+            // 파일을 읽기 위한 FileReader 객체를 생성합니다.
             const reader = new FileReader();
+            // 파일 읽기가 성공적으로 완료되었을 때 실행될 콜백 함수를 정의합니다.
             reader.onload = (e) => {
+                // 읽어온 이미지의 데이터 URL을 uploaded_images 배열에 추가하여 UI를 업데이트합니다.
                 uploaded_images = [...uploaded_images, e.target.result];
             };
+            // 파일을 데이터 URL 형식으로 읽기 시작합니다. 이 작업이 완료되면 onload 콜백이 호출됩니다.
             reader.readAsDataURL(file);
         }
     }
 
     /**
-     * '텍스트 추가' 버튼 클릭 시 ImageEditor 컴포넌트의 텍스트 객체 추가 함수를 호출합니다.
+     * @description '텍스트 추가' 버튼 클릭 시 ImageEditor 컴포넌트의 텍스트 객체 추가 함수를 호출합니다.
      */
     function add_text_object() {
+        // ImageEditor 컴포넌트의 내장 함수를 호출하여 텍스트 객체를 추가합니다.
         image_editor.add_text_object();
     }
 
     /**
-     * 업로드된 이미지를 클릭 시 ImageEditor 컴포넌트의 이미지 객체 추가 함수를 호출합니다.
+     * @description 업로드된 이미지를 클릭 시 ImageEditor 컴포넌트의 이미지 객체 추가 함수를 호출합니다.
      * @param {string} src - 추가할 이미지의 데이터 URL
      */
     function add_image_to_editor(src) {
+        // ImageEditor 컴포넌트의 내장 함수를 호출하여 이미지 객체를 추가합니다.
         image_editor.add_image_object(src);
     }
 
     /**
-     * ImageEditor의 다양한 액션을 호출하는 범용 함수.
+     * @description ImageEditor의 다양한 액션을 호출하는 범용 함수입니다.
      * @param {string} type - 실행할 액션의 종류 (예: 'undo', 'redo', 'delete_object')
      * @param {any} [payload=null] - 액션에 필요한 데이터
      * @returns {Promise<any>} 액션 실행 결과
      */
     async function handle_action(type, payload = null) {
+        // ImageEditor의 action 함수를 호출하여 특정 동작을 수행하고, 그 결과를 반환합니다.
         return await image_editor.action(type, payload);
     }
 
     /**
-     * '저장' 버튼 클릭 시 캔버스 내용을 PNG 이미지로 저장합니다.
+     * @description '저장' 버튼 클릭 시 캔버스 내용을 PNG 이미지로 저장합니다.
      */
     async function save_image() {
-        // ImageEditor의 'save' 액션을 호출하여 이미지 데이터 URL을 받음
+        // ImageEditor의 'save' 액션을 호출하여 캔버스 내용을 'png' 형식의 데이터 URL로 받습니다.
         let data_url = await handle_action('save', 'png');
-        // a 태그를 동적으로 생성하여 다운로드 링크로 사용
+        // 다운로드를 위해 임시 <a> 태그를 생성합니다.
         let a = document.createElement('a');
+        // 다운로드될 파일의 이름을 'IMAGE.png'로 설정합니다.
         a.download = 'IMAGE.png';
+        // <a> 태그의 href 속성에 이미지 데이터 URL을 할당합니다.
         a.href = data_url;
+        // <a> 태그를 body에 추가해야 일부 브라우저에서 클릭 이벤트가 정상적으로 동작합니다.
         document.body.appendChild(a);
-        a.click(); // 클릭 이벤트를 발생시켜 다운로드 실행
-        document.body.removeChild(a); // 사용된 a 태그 제거
-    }
+        // 프로그래밍 방식으로 <a> 태그를 클릭하여 파일 다운로드를 시작합니다.
+        a.click();
+        // 다운로드 후에는 더 이상 필요 없는 <a> 태그를 body에서 제거하여 DOM을 깨끗하게 유지합니다.
+        document.body.removeChild(a);
+    }""
 </script>
 
 <div class="editor-container">

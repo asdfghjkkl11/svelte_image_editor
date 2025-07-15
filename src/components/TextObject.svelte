@@ -14,20 +14,25 @@
     const dispatch = createEventDispatcher();
 
     /**
-     * 마우스 다운 이벤트를 부모 컴포넌트로 전달합니다.
-     * 드래그, 리사이즈, 회전 시작을 알립니다.
-     * @param {MouseEvent} event - 마우스 이벤트 객체
-     * @param {string} type - 조작 유형 ('drag', 'resize', 'rotate')
-     * @param {string|null} [edge=null] - 리사이즈 시 조작되는 모서리/변
+     * @description 마우스 다운 이벤트를 부모 컴포넌트(ImageEditor)로 전달하는 역할을 합니다.
+     * 사용자가 객체에 마우스를 누르면, 어떤 종류의 조작(드래그, 리사이즈, 회전)을 시작하는지 식별하여
+     * 관련 정보(이벤트 객체, 객체 데이터, 조작 유형 등)를 `mouse_down` 이벤트로 보냅니다.
+     * @param {MouseEvent} event - 원본 마우스 이벤트 객체.
+     * @param {string} type - 조작 유형. ('drag', 'resize', 'rotate')
+     * @param {string|null} [edge=null] - 리사이즈 조작 시, 핸들의 위치. (예: 'top-left')
      */
     function handle_mouse_down(event, type, edge = null) {
+        // dispatch 함수를 사용하여 부모 컴포넌트(ImageEditor)로 'mouse_down' 이벤트를 보냅니다.
+        // 이벤트 객체와 함께 조작 대상 객체(obj), 조작 유형(type), 리사이즈 엣지(edge) 정보를 전달합니다.
         dispatch('mouse_down', { event, obj, type, edge });
     }
 
     /**
-     * 객체 선택 이벤트를 부모 컴포넌트로 전달합니다.
+     * @description 사용자가 이 객체를 클릭했을 때, 부모 컴포넌트로 `select_object` 이벤트를 전달합니다.
+     * 이 이벤트는 ImageEditor가 해당 객체를 선택된 상태로 만들도록 요청하는 역할을 합니다.
      */
     function select_object() {
+        // 부모 컴포넌트로 'select_object' 이벤트를 보내고, 현재 객체(obj)를 전달합니다.
         dispatch('select_object', obj);
     }
 </script>
