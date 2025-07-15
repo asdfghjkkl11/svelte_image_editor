@@ -48,6 +48,7 @@
     let min_size = 20; // 객체의 최소 크기
     let show_rotation_angle = false; // 회전 각도 표시 여부
     let rotate_handle_position = false; // 회전 핸들 위치 (상/하)
+    let snap_lines = []; // 스냅 라인
 
     // 히스토리(undo/redo) 관련 상태 변수
     let history = []; // 객체 상태 변화를 저장하는 배열
@@ -563,26 +564,121 @@
 			let new_x = event.clientX - start_x;
 			let new_y = event.clientY - start_y;
 
-			if (event.shiftKey) {
-				const canvas_center_x = (width * scale) / 2;
-				const canvas_center_y = (height * scale) / 2;
-				const object_center_x = new_x + selected_object.width / 2;
-				const object_center_y = new_y + selected_object.height / 2;
-				const snap_threshold = 10;
+			const snap_threshold = 5;
+			const new_snap_lines = [];
+			const dragged_obj = selected_object;
 
-				if (
-					Math.abs(object_center_x - canvas_center_x) <
-					snap_threshold
-				) {
-					new_x = canvas_center_x - selected_object.width / 2;
-				}
-				if (
-					Math.abs(object_center_y - canvas_center_y) <
-					snap_threshold
-				) {
-					new_y = canvas_center_y - selected_object.height / 2;
+			// --- Start of new snap logic ---
+
+			// Un-rotated bounds for snapping
+			const dragged_bounds = {
+				left: new_x,
+				top: new_y,
+				right: new_x + dragged_obj.width,
+				bottom: new_y + dragged_obj.height,
+				h_center: new_x + dragged_obj.width / 2,
+				v_center: new_y + dragged_obj.height / 2,
+			};
+
+			const snap_targets_h = [];
+			const snap_targets_v = [];
+
+			// Canvas snap targets
+			const canvas_h_center = (width * scale) / 2;
+			const canvas_v_center = (height * scale) / 2;
+			const canvas_right = width * scale;
+			const canvas_bottom = height * scale;
+			snap_targets_h.push(0, canvas_h_center, canvas_right);
+			snap_targets_v.push(0, canvas_v_center, canvas_bottom);
+
+			// Other objects snap targets
+			objects
+				.filter((o) => o.id !== dragged_obj.id)
+				.forEach((o) => {
+					// For now, we only snap to un-rotated bounding boxes of other objects
+					// for simplicity.
+					snap_targets_h.push(
+						o.x,
+						o.x + o.width / 2,
+						o.x + o.width,
+					);
+					snap_targets_v.push(
+						o.y,
+						o.y + o.height / 2,
+						o.y + o.height,
+					);
+				});
+
+			// Find the best snap for each axis independently
+			let best_snap_x = null;
+			let min_dist_x = snap_threshold;
+
+			const dragged_points_x = {
+				left: dragged_bounds.left,
+				h_center: dragged_bounds.h_center,
+				right: dragged_bounds.right,
+			};
+
+			for (const target_x of snap_targets_h) {
+				for (const [point_name, point_pos] of Object.entries(
+					dragged_points_x,
+				)) {
+					const dist = Math.abs(point_pos - target_x);
+					if (dist < min_dist_x) {
+						min_dist_x = dist;
+						best_snap_x = { point_name, target: target_x };
+					}
 				}
 			}
+
+			if (best_snap_x) {
+				const { point_name, target } = best_snap_x;
+				if (point_name === 'left') {
+					new_x = target;
+				} else if (point_name === 'h_center') {
+					new_x = target - dragged_obj.width / 2;
+				} else if (point_name === 'right') {
+					new_x = target - dragged_obj.width;
+				}
+				new_snap_lines.push({ type: 'v', position: target });
+			}
+
+			let best_snap_y = null;
+			let min_dist_y = snap_threshold;
+
+			const dragged_points_y = {
+				top: dragged_bounds.top,
+				v_center: dragged_bounds.v_center,
+				bottom: dragged_bounds.bottom,
+			};
+
+			for (const target_y of snap_targets_v) {
+				for (const [point_name, point_pos] of Object.entries(
+					dragged_points_y,
+				)) {
+					const dist = Math.abs(point_pos - target_y);
+					if (dist < min_dist_y) {
+						min_dist_y = dist;
+						best_snap_y = { point_name, target: target_y };
+					}
+				}
+			}
+
+			if (best_snap_y) {
+				const { point_name, target } = best_snap_y;
+				if (point_name === 'top') {
+					new_y = target;
+				} else if (point_name === 'v_center') {
+					new_y = target - dragged_obj.height / 2;
+				} else if (point_name === 'bottom') {
+					new_y = target - dragged_obj.height;
+				}
+				new_snap_lines.push({ type: 'h', position: target });
+			}
+
+			// --- End of new snap logic ---
+
+			snap_lines = new_snap_lines;
 
 			selected_object.x = new_x;
 			selected_object.y = new_y;
@@ -612,6 +708,7 @@
         is_rotating = false;
         show_rotation_angle = false;
         resize_edge = null;
+        snap_lines = [];
     }
 
     /**
@@ -650,22 +747,35 @@
      * @returns {Promise<string|Blob|object>} 이미지 데이터 URL, Blob 또는 객체 배열.
      */
     async function save_image(type = 'png') {
-        switch (type) {
-            case 'png':
-                return htmlToImage.toPng(canvas);
-            case 'jpg':
-            case 'jpeg':
-                return htmlToImage.toJpeg(canvas);
-            case 'svg':
-                return htmlToImage.toSvg(canvas);
-            case 'blob':
-                return htmlToImage.toBlob(canvas);
-            case 'obj':
-                return JSON.parse(
-                    JSON.stringify(history[current_history_index]),
-                );
-            default:
-                return '';
+        if (type === 'obj') {
+            return JSON.parse(
+                JSON.stringify(history[current_history_index]),
+            );
+        }
+
+        const snap_line_elements = canvas?.querySelectorAll('.snap-line');
+        if (snap_line_elements) {
+            snap_line_elements.forEach(el => el.style.visibility = 'hidden');
+        }
+
+        try {
+            switch (type) {
+                case 'png':
+                    return await htmlToImage.toPng(canvas);
+                case 'jpg':
+                case 'jpeg':
+                    return await htmlToImage.toJpeg(canvas);
+                case 'svg':
+                    return await htmlToImage.toSvg(canvas);
+                case 'blob':
+                    return await htmlToImage.toBlob(canvas);
+                default:
+                    return '';
+            }
+        } finally {
+            if (snap_line_elements) {
+                snap_line_elements.forEach(el => el.style.visibility = 'visible');
+            }
         }
     }
 </script>
@@ -691,42 +801,57 @@
             bind:this={canvas}
             style="width: {width * scale}px; height: {height * scale}px; "
         >
-            {#each objects as obj (obj.id)}
-                {#if obj.type === 'text'}
-                    <TextObject
-                        {obj}
-                        {canvas_rect}
-                        {get_rotate_handle_position}
-                        {show_rotation_angle}
-                        {selected_object}
-                        on:mouse_down={(e) =>
-                            handle_mouse_down(
-                                e.detail.event,
-                                e.detail.obj,
-                                e.detail.type,
-                                e.detail.edge,
-                            )}
-                        on:select_object={(e) => select_object(e.detail)}
-                        on:text_edit_start={() => (is_editing_text = true)}
-                        on:text_edit_end={() => (is_editing_text = false)}
-                        on:update_object={() => (objects = [...objects])}
-                    />
-                {:else if obj.type === 'image'}
-                    <ImageObject
-                        {obj}
-                        {canvas_rect}
-                        {get_rotate_handle_position}
-                        {show_rotation_angle}
-                        {selected_object}
-                        on:mouse_down={(e) =>
-                            handle_mouse_down(
-                                e.detail.event,
-                                e.detail.obj,
-                                e.detail.type,
-                                e.detail.edge,
-                            )}
-                        on:select_object={(e) => select_object(e.detail)}
-                    />
+            <div class="objects-container">
+                {#each objects as obj (obj.id)}
+                    {#if obj.type === 'text'}
+                        <TextObject
+                            {obj}
+                            {canvas_rect}
+                            {get_rotate_handle_position}
+                            {show_rotation_angle}
+                            {selected_object}
+                            on:mouse_down={(e) =>
+                                handle_mouse_down(
+                                    e.detail.event,
+                                    e.detail.obj,
+                                    e.detail.type,
+                                    e.detail.edge,
+                                )}
+                            on:select_object={(e) => select_object(e.detail)}
+                            on:text_edit_start={() => (is_editing_text = true)}
+                            on:text_edit_end={() => (is_editing_text = false)}
+                            on:update_object={() => (objects = [...objects])}
+                        />
+                    {:else if obj.type === 'image'}
+                        <ImageObject
+                            {obj}
+                            {canvas_rect}
+                            {get_rotate_handle_position}
+                            {show_rotation_angle}
+                            {selected_object}
+                            on:mouse_down={(e) =>
+                                handle_mouse_down(
+                                    e.detail.event,
+                                    e.detail.obj,
+                                    e.detail.type,
+                                    e.detail.edge,
+                                )}
+                            on:select_object={(e) => select_object(e.detail)}
+                        />
+                    {/if}
+                {/each}
+            </div>
+            {#each snap_lines as line}
+                {#if line.type === 'v'}
+                    <div
+                        class="snap-line vertical"
+                        style="left: {line.position}px;"
+                    ></div>
+                {:else}
+                    <div
+                        class="snap-line horizontal"
+                        style="top: {line.position}px;"
+                    ></div>
                 {/if}
             {/each}
         </div>
@@ -756,8 +881,31 @@
         position: absolute;
     }
     .canvas {
-        overflow: hidden;
+        /* overflow: hidden; */
         flex-shrink: 0;
         position: relative;
+    }
+    .objects-container {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        position: relative;
+    }
+    .snap-line {
+        position: absolute;
+        background-color: #ff00e0;
+        z-index: 9999;
+    }
+
+    .snap-line.vertical {
+        width: 1px;
+        height: 100%;
+        top: 0;
+    }
+
+    .snap-line.horizontal {
+        height: 1px;
+        width: 100%;
+        left: 0;
     }
 </style>
