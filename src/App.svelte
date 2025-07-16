@@ -234,11 +234,6 @@
 							value: e.target.value,
 						})}
 					on:mousedown|stopPropagation>
-					<option value="Arial">Arial</option>
-					<option value="Verdana">Verdana</option>
-					<option value="Georgia">Georgia</option>
-					<option value="Times New Roman">Times New Roman</option>
-					<option value="Courier New">Courier New</option>
 					<option value="Pretendard">Pretendard</option>
 					<option value="Gmarket Sans">Gmarket Sans</option>
 				</select>
