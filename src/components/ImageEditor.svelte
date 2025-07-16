@@ -116,6 +116,10 @@
 			case 'save':
 				// save_image는 비동기로 동작하며, 이미지 데이터 URL을 반환합니다.
 				return await save_image(payload);
+				break;
+			case 'border-radius':
+				set_object_border_radius(payload.value);
+				break;
 		}
 	}
 
@@ -253,6 +257,17 @@
 			// 선택된 객체의 색상 속성을 새로운 색상으로 변경합니다.
 			selected_object.color = color;
 			// objects 배열을 순회하며, ID가 일치하는 객체를 업데이트된 객체로 교체합니다.
+			objects = objects.map((obj) => (obj.id === selected_object.id ? selected_object : obj));
+		}
+	}
+
+	/**
+	 * @description 현재 선택된 객체의 border-radius를 변경합니다.
+	 * @param {number} radius - 적용할 border-radius 값 (픽셀).
+	 */
+	function set_object_border_radius(radius) {
+		if (selected_object && selected_object.id) {
+			selected_object.border_radius = radius;
 			objects = objects.map((obj) => (obj.id === selected_object.id ? selected_object : obj));
 		}
 	}
@@ -1109,13 +1124,11 @@
 	bind:this={canvas_wrapper}
 	on:mousedown={handle_canvas_mouse_down}
 	on:keydown={handle_keydown}
-	tabindex="0"
->
+	tabindex="0">
 	<div
 		class="canvas-container"
 		bind:this={canvas_container}
-		style="display: flex; align-items: {container_align}; justify-content: center; min-height: 100%; width: 100%;"
-	>
+		style="display: flex; align-items: {container_align}; justify-content: center; min-height: 100%; width: 100%;">
 		<div class="canvas-bg" style="width: {width * scale}px; height: {height * scale}px; "></div>
 		<div class="canvas" bind:this={canvas} style="width: {width * scale}px; height: {height * scale}px; ">
 			<div class="objects-container">
@@ -1134,8 +1147,7 @@
 							on:select_object={(e) => select_object(e.detail)}
 							on:text_edit_start={() => (is_editing_text = true)}
 							on:text_edit_end={() => (is_editing_text = false)}
-							on:update_object={() => (objects = [...objects])}
-						/>
+							on:update_object={() => (objects = [...objects])} />
 					{:else if obj.type === 'image'}
 						<ImageObject
 							{obj}
@@ -1147,8 +1159,7 @@
 							{distance_info}
 							on:mouse_down={(e) =>
 								handle_mouse_down(e.detail.event, e.detail.obj, e.detail.type, e.detail.edge)}
-							on:select_object={(e) => select_object(e.detail)}
-						/>
+							on:select_object={(e) => select_object(e.detail)} />
 					{/if}
 				{/each}
 				{#each snap_lines as line}

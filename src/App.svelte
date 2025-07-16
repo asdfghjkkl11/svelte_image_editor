@@ -15,9 +15,9 @@
 
 	// ImageEditor 컴포넌트에 전달할 옵션 객체
 	const option = {
-		width: 400,
-		height: 540,
-		scale: 1,
+		"width": 400,
+		"height": 540,
+		"scale": 2,
 	};
 
 	/**
@@ -102,8 +102,7 @@
 				id="image-upload"
 				accept="image/*"
 				on:change={handle_image_upload}
-				style="display: none;"
-			/>
+				style="display: none;" />
 		</div>
 
 		{#if uploaded_images.length > 0}
@@ -125,11 +124,9 @@
 			<button on:click={save_image}>저장</button>
 			<button on:click={() => handle_action('undo')} disabled={current_history_index <= 0}>실행취소</button>
 			<button on:click={() => handle_action('redo')} disabled={current_history_index >= history_length - 1}
-				>되돌리기</button
-			>
+				>되돌리기</button>
 			<button class="tool-btn" on:click|stopPropagation={() => handle_action('bring_to_front')}>
-				맨 앞으로</button
-			>
+				맨 앞으로</button>
 			<button class="tool-btn" on:click|stopPropagation={() => handle_action('bring_forward')}> 앞으로</button>
 			<button class="tool-btn" on:click|stopPropagation={() => handle_action('send_backward')}> 뒤로 </button>
 			<button class="tool-btn" on:click|stopPropagation={() => handle_action('send_to_back')}> 맨 뒤로 </button>
@@ -140,38 +137,32 @@
 			</button>
 			<button
 				class="tool-btn"
-				on:click|stopPropagation={() => handle_action('format_text', { command: 'italic' })}
-			>
+				on:click|stopPropagation={() => handle_action('format_text', { command: 'italic' })}>
 				<i>I</i>
 			</button>
 			<button
 				class="tool-btn"
-				on:click|stopPropagation={() => handle_action('format_text', { command: 'underline' })}
-			>
+				on:click|stopPropagation={() => handle_action('format_text', { command: 'underline' })}>
 				<u>U</u>
 			</button>
 			<button
 				class="tool-btn"
-				on:click|stopPropagation={() => handle_action('format_text', { command: 'strikeThrough' })}
-			>
+				on:click|stopPropagation={() => handle_action('format_text', { command: 'strikeThrough' })}>
 				<s>S</s>
 			</button>
 			<button
 				class="tool-btn"
-				on:click|stopPropagation={() => handle_action('format_text', { command: 'justifyLeft' })}
-			>
+				on:click|stopPropagation={() => handle_action('format_text', { command: 'justifyLeft' })}>
 				왼쪽 정렬
 			</button>
 			<button
 				class="tool-btn"
-				on:click|stopPropagation={() => handle_action('format_text', { command: 'justifyCenter' })}
-			>
+				on:click|stopPropagation={() => handle_action('format_text', { command: 'justifyCenter' })}>
 				가운데 정렬
 			</button>
 			<button
 				class="tool-btn"
-				on:click|stopPropagation={() => handle_action('format_text', { command: 'justifyRight' })}
-			>
+				on:click|stopPropagation={() => handle_action('format_text', { command: 'justifyRight' })}>
 				오른쪽 정렬
 			</button>
 			<label class="tool-label">
@@ -184,8 +175,7 @@
 							command: 'foreColor',
 							value: e.target.value,
 						})}
-					on:mousedown|stopPropagation
-				/>
+					on:mousedown|stopPropagation />
 			</label>
 			<label class="tool-label">
 				<span>글자 배경색</span>
@@ -197,8 +187,7 @@
 							command: 'backColor',
 							value: e.target.value,
 						})}
-					on:mousedown|stopPropagation
-				/>
+					on:mousedown|stopPropagation />
 			</label>
 			<label class="tool-label">
 				<span>배경색</span>
@@ -206,8 +195,7 @@
 					type="color"
 					class="tool-btn"
 					on:input={(e) => handle_action('set_text_object_background_color', e.target.value)}
-					on:mousedown|stopPropagation
-				/>
+					on:mousedown|stopPropagation />
 			</label>
 			<label class="tool-label">
 				<span>글자크기</span>
@@ -217,8 +205,7 @@
 						handle_action('change_font_size', {
 							value: e.target.value,
 						})}
-					on:mousedown|stopPropagation
-				>
+					on:mousedown|stopPropagation>
 					<option value="8">8</option>
 					<option value="9">9</option>
 					<option value="10">10</option>
@@ -246,8 +233,7 @@
 							command: 'fontName',
 							value: e.target.value,
 						})}
-					on:mousedown|stopPropagation
-				>
+					on:mousedown|stopPropagation>
 					<option value="Arial">Arial</option>
 					<option value="Verdana">Verdana</option>
 					<option value="Georgia">Georgia</option>
@@ -255,6 +241,35 @@
 					<option value="Courier New">Courier New</option>
 					<option value="Pretendard">Pretendard</option>
 					<option value="Gmarket Sans">Gmarket Sans</option>
+				</select>
+			</label>
+			<label class="tool-label">
+				<span>border-radius</span>
+				<select
+						class="tool-btn"
+						on:change={(e) =>
+						handle_action('border-radius', {
+							value: e.target.value,
+						})}
+						on:mousedown|stopPropagation>
+					<option value="0">0</option>
+					<option value="4">4</option>
+					<option value="8">8</option>
+					<option value="9">9</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="14">14</option>
+					<option value="16">16</option>
+					<option value="18">18</option>
+					<option value="20">20</option>
+					<option value="22">22</option>
+					<option value="24">24</option>
+					<option value="26">26</option>
+					<option value="28">28</option>
+					<option value="36">36</option>
+					<option value="48">48</option>
+					<option value="72">72</option>
 				</select>
 			</label>
 		</div>
@@ -363,6 +378,14 @@
 	}
 	.tool-label .tool-btn {
 		flex: 1;
+	}
+
+	.tool-label input[type='number'] {
+		width: 60px;
+		padding: 4px;
+		border: 1px solid #ddd;
+		border-radius: 4px;
+		text-align: center;
 	}
 
 	button {

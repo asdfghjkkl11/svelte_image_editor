@@ -49,8 +49,7 @@
       transform: rotate({obj.angle}deg);
       border: 2px solid #333;
     "
-		on:mousedown={(e) => handle_mouse_down(e, 'drag')}
-	>
+		on:mousedown={(e) => handle_mouse_down(e, 'drag')}>
 		<img class="image" src={obj.src} alt={obj.alt} style="width: 100%; height: 100%;" />
 		<ObjectControls
 			{obj}
@@ -59,8 +58,7 @@
 			{selected_object}
 			{show_resize_info}
 			{distance_info}
-			on:mouse_down={(e) => handle_mouse_down(e.detail.event, e.detail.type, e.detail.edge)}
-		/>
+			on:mouse_down={(e) => handle_mouse_down(e.detail.event, e.detail.type, e.detail.edge)} />
 	</div>
 {:else}
 	<!--본체-->
@@ -72,10 +70,14 @@
     width: {obj.width}px;
     height: {obj.height}px;
     transform: rotate({obj.angle}deg);
+    border-radius: {obj.border_radius}px;
   "
-		on:click={select_object}
-	>
-		<img class="image" src={obj.src} alt={obj.alt} style="width: 100%; height: 100%;" />
+		on:click={select_object}>
+		<img
+			class="image"
+			src={obj.src}
+			alt={obj.alt}
+			style="width: 100%; height: 100%; border-radius: {obj.border_radius}px;" />
 	</div>
 {/if}
 

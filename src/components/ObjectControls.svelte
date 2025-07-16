@@ -40,8 +40,8 @@
         {get_rotate_handle_position(obj) ? 'top: -30px; bottom: unset;' : 'top: unset; bottom: -30px;'}
         left: 50%;
         transform: translateX(-50%);"
-	on:mousedown={(e) => handle_mouse_down(e, 'rotate')}
-></div>
+	on:mousedown={(e) => handle_mouse_down(e, 'rotate')}>
+</div>
 
 {#if show_rotation_angle && obj.id === selected_object?.id}
 	<div class="rotation-angle">
@@ -74,8 +74,7 @@
 					: '10px'
 				: '-50%'}
                     );
-                "
-		>
+                ">
 			{info.distance}px
 		</div>
 	{/each}

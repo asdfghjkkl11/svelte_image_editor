@@ -49,9 +49,13 @@
       transform: rotate({obj.angle}deg);
       border: 2px solid #333;
     "
-		on:mousedown={(e) => handle_mouse_down(e, 'drag')}
-	>
-		<div class="background-overlay" style="background: {obj.color};"></div>
+		on:mousedown={(e) => handle_mouse_down(e, 'drag')}>
+		<div
+			class="background-overlay"
+			style="
+				background: {obj.color};
+				border-radius: {obj.border_radius}px;">
+		</div>
 		<div
 			class="text-element-editable"
 			contenteditable="true"
@@ -63,8 +67,8 @@
 			on:input={(e) => {
 				obj.text = e.target.innerHTML;
 				dispatch('update_object', obj);
-			}}
-		></div>
+			}}>
+		</div>
 		<ObjectControls
 			{obj}
 			{get_rotate_handle_position}
@@ -72,8 +76,7 @@
 			{selected_object}
 			{show_resize_info}
 			{distance_info}
-			on:mouse_down={(e) => handle_mouse_down(e.detail.event, e.detail.type, e.detail.edge)}
-		/>
+			on:mouse_down={(e) => handle_mouse_down(e.detail.event, e.detail.type, e.detail.edge)} />
 	</div>
 {:else}
 	<!--본체-->
@@ -86,10 +89,10 @@
             height: {obj.height}px;
             background: {obj.color};
             transform: rotate({obj.angle}deg);
+            border-radius: {obj.border_radius}px;
           "
-		on:click={select_object}
-	>
-		<div class="text-element">{@html obj.text}</div>
+		on:click={select_object}>
+		<div class="text-element" style="border-radius: {obj.border_radius}px;">{@html obj.text}</div>
 	</div>
 {/if}
 
@@ -126,7 +129,6 @@
 		position: absolute;
 		width: 100%;
 		height: 100%;
-		opacity: 0.2;
 		pointer-events: none;
 	}
 
