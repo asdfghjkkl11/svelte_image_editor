@@ -687,76 +687,83 @@
 			new_y = Math.round(new_y / 2) * 2;
 		}
 
-		const snap_threshold = 5;
-		const new_snap_lines = [];
-		const dragged_obj = selected_object;
+		const snap_threshold = 5; // 스냅 임계값 (픽셀)
+		const new_snap_lines = []; // 새로 생성될 스냅 라인 배열
+		const dragged_obj = selected_object; // 현재 드래그 중인 객체
 
-		// --- Start of new snap logic ---
+		// --- 새로운 스냅 로직 시작 ---
 
-		// Un-rotated bounds for snapping
+		// 회전되지 않은 상태의 드래그 중인 객체 경계 (스냅 계산용)
 		const dragged_bounds = {
 			left: new_x,
 			top: new_y,
 			right: new_x + dragged_obj.width,
 			bottom: new_y + dragged_obj.height,
-			h_center: new_x + dragged_obj.width / 2,
-			v_center: new_y + dragged_obj.height / 2,
+			h_center: new_x + dragged_obj.width / 2, // 수평 중앙
+			v_center: new_y + dragged_obj.height / 2, // 수직 중앙
 		};
 
-		const snap_targets_h = [];
-		const snap_targets_v = [];
+		const snap_targets_h = []; // 수평 스냅 대상 좌표 배열
+		const snap_targets_v = []; // 수직 스냅 대상 좌표 배열
 
-		// Canvas snap targets
+		// 캔버스 스냅 대상 (캔버스 가장자리 및 중앙)
 		const canvas_h_center = (width * scale) / 2;
 		const canvas_v_center = (height * scale) / 2;
 		const canvas_right = width * scale;
 		const canvas_bottom = height * scale;
-		snap_targets_h.push(0, canvas_h_center, canvas_right);
-		snap_targets_v.push(0, canvas_v_center, canvas_bottom);
+		snap_targets_h.push(0, canvas_h_center, canvas_right); // 캔버스 왼쪽, 중앙, 오른쪽
+		snap_targets_v.push(0, canvas_v_center, canvas_bottom); // 캔버스 상단, 중앙, 하단
 
+		// 드래그 중인 객체를 제외한 다른 모든 객체들
 		const other_objects = objects.filter((o) => o.id !== dragged_obj.id);
 
+		// 다른 객체들의 스냅 포인트 추가
 		other_objects.forEach((o) => {
 			const obj_h_center = o.x + o.width / 2;
 			const obj_v_center = o.y + o.height / 2;
 
-			// Add object's own snap points
+			// 객체 자체의 스냅 포인트 (왼쪽, 중앙, 오른쪽 / 상단, 중앙, 하단)
 			snap_targets_h.push(o.x, obj_h_center, o.x + o.width);
 			snap_targets_v.push(o.y, obj_v_center, o.y + o.height);
 
-			// Add midpoints between object and canvas edges
-			snap_targets_h.push(obj_h_center / 2); // Midpoint with left edge (0)
-			snap_targets_h.push((obj_h_center + canvas_right) / 2); // Midpoint with right edge
-			snap_targets_v.push(obj_v_center / 2); // Midpoint with top edge (0)
-			snap_targets_v.push((obj_v_center + canvas_bottom) / 2); // Midpoint with bottom edge
+			// 객체와 캔버스 가장자리 사이의 중간점 추가
+			snap_targets_h.push(obj_h_center / 2); // 왼쪽 가장자리(0)와의 중간점
+			snap_targets_h.push((obj_h_center + canvas_right) / 2); // 오른쪽 가장자리와의 중간점
+			snap_targets_v.push(obj_v_center / 2); // 상단 가장자리(0)와의 중간점
+			snap_targets_v.push((obj_v_center + canvas_bottom) / 2); // 하단 가장자리와의 중간점
 		});
 
-		// Add midpoints between pairs of other objects
+		// 다른 객체 쌍 사이의 중간점 추가
 		for (let i = 0; i < other_objects.length; i++) {
 			for (let j = i + 1; j < other_objects.length; j++) {
 				const obj1 = other_objects[i];
 				const obj2 = other_objects[j];
 
+				// 두 객체 중앙점의 중간점 (수평)
 				const mid_center_x = (obj1.x + obj1.width / 2 + obj2.x + obj2.width / 2) / 2;
 				snap_targets_h.push(mid_center_x);
 
+				// 두 객체 중앙점의 중간점 (수직)
 				const mid_center_y = (obj1.y + obj1.height / 2 + obj2.y + obj2.height / 2) / 2;
 				snap_targets_v.push(mid_center_y);
 			}
 		}
 
-		let best_snap_x = null;
-		let min_dist_x = snap_threshold;
+		let best_snap_x = null; // 최적의 수평 스냅 정보
+		let min_dist_x = snap_threshold; // 최소 수평 거리 (스냅 임계값으로 초기화)
 
+		// 드래그 중인 객체의 수평 스냅 포인트
 		const dragged_points_x = {
 			left: dragged_bounds.left,
 			h_center: dragged_bounds.h_center,
 			right: dragged_bounds.right,
 		};
 
+		// 모든 수평 스냅 대상에 대해 드래그 중인 객체의 각 스냅 포인트와의 거리 계산
 		for (const target_x of snap_targets_h) {
 			for (const [point_name, point_pos] of Object.entries(dragged_points_x)) {
 				const dist = Math.abs(point_pos - target_x);
+				// 현재 최소 거리보다 작으면 업데이트
 				if (dist < min_dist_x) {
 					min_dist_x = dist;
 					best_snap_x = { point_name, target: target_x };
@@ -764,6 +771,7 @@
 			}
 		}
 
+		// 최적의 수평 스냅이 발견되면 객체 위치 조정 및 스냅 라인 추가
 		if (best_snap_x) {
 			const { point_name, target } = best_snap_x;
 			if (point_name === 'left') {
@@ -773,21 +781,24 @@
 			} else if (point_name === 'right') {
 				new_x = target - dragged_obj.width;
 			}
-			new_snap_lines.push({ type: 'v', position: target });
+			new_snap_lines.push({ type: 'v', position: target }); // 수직 스냅 라인 추가
 		}
 
-		let best_snap_y = null;
-		let min_dist_y = snap_threshold;
+		let best_snap_y = null; // 최적의 수직 스냅 정보
+		let min_dist_y = snap_threshold; // 최소 수직 거리 (스냅 임계값으로 초기화)
 
+		// 드래그 중인 객체의 수직 스냅 포인트
 		const dragged_points_y = {
 			top: dragged_bounds.top,
 			v_center: dragged_bounds.v_center,
 			bottom: dragged_bounds.bottom,
 		};
 
+		// 모든 수직 스냅 대상에 대해 드래그 중인 객체의 각 스냅 포인트와의 거리 계산
 		for (const target_y of snap_targets_v) {
 			for (const [point_name, point_pos] of Object.entries(dragged_points_y)) {
 				const dist = Math.abs(point_pos - target_y);
+				// 현재 최소 거리보다 작으면 업데이트
 				if (dist < min_dist_y) {
 					min_dist_y = dist;
 					best_snap_y = { point_name, target: target_y };
@@ -795,6 +806,7 @@
 			}
 		}
 
+		// 최적의 수직 스냅이 발견되면 객체 위치 조정 및 스냅 라인 추가
 		if (best_snap_y) {
 			const { point_name, target } = best_snap_y;
 			if (point_name === 'top') {
@@ -804,16 +816,17 @@
 			} else if (point_name === 'bottom') {
 				new_y = target - dragged_obj.height;
 			}
-			new_snap_lines.push({ type: 'h', position: target });
+			new_snap_lines.push({ type: 'h', position: target }); // 수평 스냅 라인 추가
 		}
 
-		// --- End of new snap logic ---
+		// --- 새로운 스냅 로직 끝 ---
 
-		snap_lines = new_snap_lines;
+		snap_lines = new_snap_lines; // 계산된 스냅 라인 업데이트
 
-		selected_object.x = new_x;
-		selected_object.y = new_y;
+		selected_object.x = new_x; // 객체의 x 좌표 업데이트
+		selected_object.y = new_y; // 객체의 y 좌표 업데이트
 
+		// 현재 드래그 중인 객체의 경계 정보
 		const current_bounds_drag = {
 			left: selected_object.x,
 			top: selected_object.y,
@@ -821,42 +834,47 @@
 			bottom: selected_object.y + selected_object.height,
 		};
 
-		let h_distances = [];
-		let v_distances = [];
+		let h_distances = []; // 수평 거리 정보 배열
+		let v_distances = []; // 수직 거리 정보 배열
 
-		// Check against canvas edges
-		h_distances.push({ dist: Math.abs(current_bounds_drag.left - 0), direction: 'left' });
-		h_distances.push({ dist: Math.abs(current_bounds_drag.right - canvas_right), direction: 'right' });
-		v_distances.push({ dist: Math.abs(current_bounds_drag.top - 0), direction: 'top' });
-		v_distances.push({ dist: Math.abs(current_bounds_drag.bottom - canvas_bottom), direction: 'bottom' });
+		// 캔버스 가장자리와의 거리 확인
+		h_distances.push({ dist: Math.abs(current_bounds_drag.left - 0), direction: 'left' }); // 캔버스 왼쪽 가장자리
+		h_distances.push({ dist: Math.abs(current_bounds_drag.right - canvas_right), direction: 'right' }); // 캔버스 오른쪽 가장자리
+		v_distances.push({ dist: Math.abs(current_bounds_drag.top - 0), direction: 'top' }); // 캔버스 상단 가장자리
+		v_distances.push({ dist: Math.abs(current_bounds_drag.bottom - canvas_bottom), direction: 'bottom' }); // 캔버스 하단 가장자리
 
-		// Check against other objects
+		// 다른 객체들과의 거리 확인
 		objects
-			.filter((o) => o.id !== selected_object.id)
+			.filter((o) => o.id !== selected_object.id) // 현재 객체 제외
 			.forEach((o) => {
-				h_distances.push({ dist: Math.abs(current_bounds_drag.left - (o.x + o.width)), direction: 'left' });
-				h_distances.push({ dist: Math.abs(current_bounds_drag.right - o.x), direction: 'right' });
-				v_distances.push({ dist: Math.abs(current_bounds_drag.top - (o.y + o.height)), direction: 'top' });
-				v_distances.push({ dist: Math.abs(current_bounds_drag.bottom - o.y), direction: 'bottom' });
+				h_distances.push({ dist: Math.abs(current_bounds_drag.left - (o.x + o.width)), direction: 'left' }); // 다른 객체의 오른쪽 가장자리와 현재 객체의 왼쪽 가장자리
+				h_distances.push({ dist: Math.abs(current_bounds_drag.right - o.x), direction: 'right' }); // 다른 객체의 왼쪽 가장자리와 현재 객체의 오른쪽 가장자리
+				v_distances.push({ dist: Math.abs(current_bounds_drag.top - (o.y + o.height)), direction: 'top' }); // 다른 객체의 하단 가장자리와 현재 객체의 상단 가장자리
+				v_distances.push({ dist: Math.abs(current_bounds_drag.bottom - o.y), direction: 'bottom' }); // 다른 객체의 상단 가장자리와 현재 객체의 하단 가장자리
 			});
 
+		// 가장 가까운 수평 및 수직 거리 찾기
 		const min_h_dist = h_distances.sort((a, b) => a.dist - b.dist)[0];
 		const min_v_dist = v_distances.sort((a, b) => a.dist - b.dist)[0];
 
-		const new_distance_info = [];
+		const new_distance_info = []; // 새로운 거리 정보 배열
+		// 유효한 수평 거리가 있으면 추가
 		if (min_h_dist && min_h_dist.dist > 0.5) {
 			new_distance_info.push({ distance: Math.round(min_h_dist.dist), direction: min_h_dist.direction });
 		}
+		// 유효한 수직 거리가 있으면 추가
 		if (min_v_dist && min_v_dist.dist > 0.5) {
 			new_distance_info.push({ distance: Math.round(min_v_dist.dist), direction: min_v_dist.direction });
 		}
 
+		// 거리 정보 업데이트
 		if (new_distance_info.length > 0) {
 			distance_info = new_distance_info;
 		} else {
 			distance_info = null;
 		}
 
+		// Svelte의 반응성을 위해 objects 배열 업데이트
 		objects = objects.map((obj) => (obj.id === selected_object.id ? selected_object : obj));
 	}
 
@@ -866,13 +884,14 @@
 	 * @param {MouseEvent} event - 마우스 이벤트 객체.
 	 */
 	function handle_resize_move(event) {
+		// handle_resize 함수를 호출하여 새로운 너비, 높이, x, y 좌표를 계산합니다.
 		const result = handle_resize(event, selected_object, resize_edge);
-		selected_object.width = result.width;
-		selected_object.height = result.height;
-		selected_object.x = result.x;
-		selected_object.y = result.y;
+		selected_object.width = result.width; // 계산된 새 너비 적용
+		selected_object.height = result.height; // 계산된 새 높이 적용
+		selected_object.x = result.x; // 계산된 새 x 좌표 적용
+		selected_object.y = result.y; // 계산된 새 y 좌표 적용
 
-		// Calculate and update distance_info
+		// 거리 정보 계산 및 업데이트
 		const current_bounds = {
 			left: selected_object.x,
 			top: selected_object.y,
@@ -880,12 +899,13 @@
 			bottom: selected_object.y + selected_object.height,
 		};
 
-		let min_distance = Infinity;
-		let distance_direction = '';
+		let min_distance = Infinity; // 최소 거리 초기화
+		let distance_direction = ''; // 거리 방향 초기화
 
 		const canvas_width = width * scale;
 		const canvas_height = height * scale;
 
+		// 거리 확인 헬퍼 함수
 		const check_distance = (current_pos, target_pos, direction) => {
 			const dist = Math.abs(current_pos - target_pos);
 			if (dist < min_distance) {
@@ -894,36 +914,37 @@
 			}
 		};
 
-		// Check against canvas edges
+		// 캔버스 가장자리와의 거리 확인
 		if (resize_edge.includes('left')) {
-			check_distance(current_bounds.left, 0, 'left');
+			check_distance(current_bounds.left, 0, 'left'); // 왼쪽 가장자리
 		} else if (resize_edge.includes('right')) {
-			check_distance(current_bounds.right, canvas_width, 'right');
+			check_distance(current_bounds.right, canvas_width, 'right'); // 오른쪽 가장자리
 		}
 
 		if (resize_edge.includes('top')) {
-			check_distance(current_bounds.top, 0, 'top');
+			check_distance(current_bounds.top, 0, 'top'); // 상단 가장자리
 		} else if (resize_edge.includes('bottom')) {
-			check_distance(current_bounds.bottom, canvas_height, 'bottom');
+			check_distance(current_bounds.bottom, canvas_height, 'bottom'); // 하단 가장자리
 		}
 
-		// Check against other objects
+		// 다른 객체들과의 거리 확인
 		objects
-			.filter((o) => o.id !== selected_object.id)
+			.filter((o) => o.id !== selected_object.id) // 현재 객체 제외
 			.forEach((o) => {
 				if (resize_edge.includes('left')) {
-					check_distance(current_bounds.left, o.x + o.width, 'left');
+					check_distance(current_bounds.left, o.x + o.width, 'left'); // 다른 객체의 오른쪽 가장자리
 				} else if (resize_edge.includes('right')) {
-					check_distance(current_bounds.right, o.x, 'right');
+					check_distance(current_bounds.right, o.x, 'right'); // 다른 객체의 왼쪽 가장자리
 				}
 
 				if (resize_edge.includes('top')) {
-					check_distance(current_bounds.top, o.y + o.height, 'top');
+					check_distance(current_bounds.top, o.y + o.height, 'top'); // 다른 객체의 하단 가장자리
 				} else if (resize_edge.includes('bottom')) {
-					check_distance(current_bounds.bottom, o.y, 'bottom');
+					check_distance(current_bounds.bottom, o.y, 'bottom'); // 다른 객체의 상단 가장자리
 				}
 			});
 
+		// 최소 거리가 유효하면 거리 정보 업데이트
 		if (min_distance !== Infinity && min_distance > 0) {
 			distance_info = [
 				{
@@ -932,9 +953,10 @@
 				},
 			];
 		} else {
-			distance_info = null;
+			distance_info = null; // 거리 정보 초기화
 		}
 
+		// Svelte의 반응성을 위해 objects 배열 업데이트
 		objects = objects.map((obj) => (obj.id === selected_object.id ? selected_object : obj));
 	}
 
@@ -944,6 +966,7 @@
 	 * @param {MouseEvent} event - 마우스 이벤트 객체.
 	 */
 	function handle_rotate_move(event) {
+		// handle_rotate 함수를 호출하여 선택된 객체의 회전 각도를 업데이트합니다.
 		handle_rotate(event, selected_object);
 	}
 
